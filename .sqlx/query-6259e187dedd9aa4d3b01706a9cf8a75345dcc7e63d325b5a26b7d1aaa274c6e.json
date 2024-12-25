@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO measurements(\n        \"node\",\n        \"temperature\",\n        \"humidity\",\n        \"air_pressure\"\n    )\nVALUES ($1, $2, $3, $4)\nRETURNING id;",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int2",
+        "Numeric",
+        "Int2",
+        "Int2"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "6259e187dedd9aa4d3b01706a9cf8a75345dcc7e63d325b5a26b7d1aaa274c6e"
+}

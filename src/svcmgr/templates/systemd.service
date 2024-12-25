@@ -1,0 +1,15 @@
+[Unit]
+Description=PixelWeather Messaging Protocol Server
+After=network.target
+StartLimitBurst=5
+StartLimitIntervalSec=10
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=5
+User={user}
+ExecStart={exec}
+
+[Install]
+WantedBy=multi-user.target

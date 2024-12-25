@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO\n    firmware_stats (\n        node,\n        from_version_major,\n        from_version_middle,\n        from_version_minor,\n        to_version_major,\n        to_version_middle,\n        to_version_minor\n    )\nVALUES\n    ($1, $2, $3, $4, $5, $6, $7)\nRETURNING id;",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int2",
+        "Int2",
+        "Int2",
+        "Int2",
+        "Int2",
+        "Int2",
+        "Int2"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "f5ce2b64bc88e9919f04555665ee977789cce33b625e180ea94316801bc8b425"
+}

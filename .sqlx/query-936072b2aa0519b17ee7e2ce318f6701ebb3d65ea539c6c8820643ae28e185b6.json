@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DROP TABLE IF EXISTS statistics,\nsettings,\nnotifications,\nmeasurements,\nfirmware_stats,\nfirmwares,\ndevices,\n_sqlx_migrations CASCADE;",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "936072b2aa0519b17ee7e2ce318f6701ebb3d65ea539c6c8820643ae28e185b6"
+}

@@ -1,0 +1,49 @@
+[package]
+name = "pwmp-server"
+version = "2.0.0"
+edition = "2021"
+authors = ["Fábián Varga <23280129+br0kenpixel@users.noreply.github.com>"]
+description = "The PixelWeather Messaging Protocol server."
+rust-version = "1.83"
+homepage = "https://github.com/PixelWeatherProject"
+license-file = "LICENSE"
+readme = "README.md"
+repository = "https://github.com/PixelWeatherProject/pwmp-server"
+
+[profile.release]
+strip = true
+
+[dependencies]
+#pwmp-msg = { git = "ssh://git@github.com/PixelWeatherProject/pwmp-msg.git" }
+#pwmp-db-diesel = { git = "ssh://git@github.com/PixelWeatherProject/pwmp-db-diesel.git" }
+#pwmp-client = { git = "ssh://git@github.com/PixelWeatherProject/pwmp-client.git" }
+pwmp-msg = { path = "../pwmp-msg" }
+pwmp-client = { path = "../pwmp-client" }
+sqlx = { version = "0.8.2", default-features = false, features = [
+    "postgres",
+    "runtime-tokio",
+    "migrate",
+    "macros",
+    "rust_decimal",
+    "tls-rustls",
+] }
+tokio = { version = "1.35.1", default-features = false, features = [
+    "rt-multi-thread",
+] }
+clap = { version = "4.5.21", features = ["derive"] }
+confy = { version = "0.6.1", default-features = false, features = [
+    "yaml_conf",
+] }
+homedir = { version = "0.3.4", default-features = false }
+log = { version = "0.4.22", features = ["std"] }
+serde = { version = "1.0.215", features = ["derive"] }
+simple_logger = { version = "5.0.0", default-features = false, features = [
+    "colors",
+    "colored",
+    "stderr",
+    "timestamps",
+] }
+thiserror = "2.0.3"
+time = { version = "0.3.36", default-features = false, features = ["macros"] }
+rust_decimal = { version = "1.36.0", features = ["db-diesel-postgres"] }
+users = { version = "0.11.0", default-features = false }

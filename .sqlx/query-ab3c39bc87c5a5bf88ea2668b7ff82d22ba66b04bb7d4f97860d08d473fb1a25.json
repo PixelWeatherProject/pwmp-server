@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO statistics(\n        \"measurement\",\n        \"battery\",\n        \"wifi_ssid\",\n        \"wifi_rssi\"\n    )\nVALUES ($1, $2, $3, $4);",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Numeric",
+        "Varchar",
+        "Int2"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ab3c39bc87c5a5bf88ea2668b7ff82d22ba66b04bb7d4f97860d08d473fb1a25"
+}

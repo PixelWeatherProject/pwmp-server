@@ -1,0 +1,9 @@
+- Handle logger setup errors
+- Added `--debug` switch
+- Debug logging now possible in release builds too
+- Updated the `ServiceManager` trait to be more clear
+- Added docs to the `ServiceManager` trait
+- Renamed the service `check` command to `status`
+- Better handling of SystemD service statuses
+- Better/More error handling
+- Added support for OTA updates

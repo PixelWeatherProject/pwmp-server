@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT battery_ignore, ota, sleep_time, sbop, mute_notifications\nFROM settings\nWHERE node = $1;",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "battery_ignore",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 1,
+        "name": "ota",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 2,
+        "name": "sleep_time",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 3,
+        "name": "sbop",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "mute_notifications",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int2"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "df550debd7535a5748681d00940565c0cef818ce726f9a919de3d7ecbeb4d53d"
+}

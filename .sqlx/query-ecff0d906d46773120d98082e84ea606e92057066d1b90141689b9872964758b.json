@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n  id\nFROM\n  firmware_stats\nWHERE\n  success IS NULL\n  AND node = $1\nORDER BY\n  \"when\" DESC\nLIMIT\n  1;",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int2"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "ecff0d906d46773120d98082e84ea606e92057066d1b90141689b9872964758b"
+}

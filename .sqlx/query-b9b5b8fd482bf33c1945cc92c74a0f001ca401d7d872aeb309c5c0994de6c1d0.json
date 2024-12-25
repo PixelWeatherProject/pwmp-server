@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE\n  firmware_stats\nSET\n  success = $2\nWHERE\n  id = $1;",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b9b5b8fd482bf33c1945cc92c74a0f001ca401d7d872aeb309c5c0994de6c1d0"
+}
