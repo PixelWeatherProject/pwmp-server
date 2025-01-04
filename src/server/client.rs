@@ -1,6 +1,6 @@
 use super::db::{DatabaseClient, FirmwareBlob, MeasurementId, NodeId};
 use crate::error::Error;
-use log::{debug, warn};
+use log::{debug, error, warn};
 use pwmp_msg::{mac::Mac, request::Request, response::Response, version::Version, Message};
 use std::{
     io::{Cursor, Read, Write},
@@ -107,9 +107,16 @@ impl Client<Unathenticated> {
                 authorized_client.send_response(Response::Ok)?;
                 Ok(authorized_client)
             }
-            Ok(None) => Err(Error::Auth),
-            Err(why) => {
+            Ok(None) => {
                 warn!("Device {} is not authorized", self.peer_addr_str());
+                self.send_response(Response::Reject)?;
+                Err(Error::Auth)
+            }
+            Err(why) => {
+                error!(
+                    "Could not perform authentication of {}",
+                    self.peer_addr_str()
+                );
                 self.send_response(Response::Reject)?;
                 Err(why)
             }
