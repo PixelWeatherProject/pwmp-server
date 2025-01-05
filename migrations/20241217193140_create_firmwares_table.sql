@@ -7,5 +7,5 @@ CREATE TABLE
         version_minor SMALLINT NOT NULL CHECK (version_minor >= 0),
         firmware BYTEA NOT NULL CHECK (length(firmware) > 0),
         added_date TIMESTAMP UNIQUE NOT NULL DEFAULT NOW (),
-        restrict_nodes SMALLINT[]
+        restrict_nodes SMALLINT[] DEFAULT NULL
     );
