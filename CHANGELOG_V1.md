@@ -7,3 +7,4 @@
 - Better handling of SystemD service statuses
 - Better/More error handling
 - Added support for OTA updates
+- Using Postcard instead of Bincode
