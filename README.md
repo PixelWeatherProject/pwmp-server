@@ -55,3 +55,7 @@ TODO:
 - [ ] Add support for macOS Homebrew services
 
 Service management on Windows is **not** and **will not** be supported.
+
+# Portability
+Due to some dependencies relying on glibc, you will not be able to run the binary on distributions like Alpine Linux (`gcompat` will **not** work).
+For other distributions, you should install `libpq`.
