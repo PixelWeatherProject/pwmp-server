@@ -85,22 +85,26 @@ impl DatabaseClient {
         Ok(())
     }
 
-    pub fn get_settings(&self, node_id: NodeId) -> Result<NodeSettings, Error> {
+    pub fn get_settings(&self, node_id: NodeId) -> Result<Option<NodeSettings>, Error> {
         let result = query!(
             self.rt,
             self.pool,
             "queries/get_device_settings.sql",
             fetch_one,
             node_id
-        )?;
+        );
 
-        Ok(NodeSettings {
-            battery_ignore: result.battery_ignore,
-            ota: result.ota,
-            sleep_time: result.sleep_time.try_into()?,
-            sbop: result.sbop,
-            mute_notifications: result.mute_notifications,
-        })
+        match result {
+            Ok(record) => Ok(Some(NodeSettings {
+                battery_ignore: record.battery_ignore,
+                ota: record.ota,
+                sleep_time: record.sleep_time.try_into()?,
+                sbop: record.sbop,
+                mute_notifications: record.mute_notifications,
+            })),
+            Err(sqlx::error::Error::RowNotFound) => Ok(None),
+            Err(why) => Err(why.into()),
+        }
     }
 
     pub fn post_results(
