@@ -115,6 +115,10 @@ fn handle_request(
         Request::GetSettings => {
             let values = db.get_settings(client.id())?;
 
+            if values.is_none() {
+                warn!("{}: Settings are undefined", client.id());
+            }
+
             Ok(Some(Response::Settings(values)))
         }
         Request::UpdateCheck(current_ver) => {
