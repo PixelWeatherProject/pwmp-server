@@ -50,6 +50,8 @@ pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>
             let connections = connections.clone();
             let db = shared_db.clone();
 
+            debug!("Connection count: {}", connections.load(Ordering::SeqCst));
+
             thread::spawn(move || {
                 debug!("New client: {}", peer_addr);
 
