@@ -175,7 +175,7 @@ fn set_panic_hook(connection_count: Arc<AtomicU32>) {
 
     panic::set_hook(Box::new(move |panic_info| {
         warn!("A client thread has paniced");
-        default(panic_info);
         connection_count.fetch_sub(1, Ordering::Relaxed);
+        default(panic_info);
     }));
 }
