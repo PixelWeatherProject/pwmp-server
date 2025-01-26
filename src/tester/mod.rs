@@ -1,6 +1,7 @@
-use log::{error, info};
-use pwmp_client::{pwmp_msg::mac::Mac, PwmpClient};
-use std::str::FromStr;
+use log::{debug, error, info};
+use pwmp_client::{ota::UpdateStatus, pwmp_msg::mac::Mac, PwmpClient};
+use pwmp_msg::{dec, version::Version, Decimal};
+use std::{process::exit, str::FromStr};
 
 /// Try to connect to a server and authenticate with the given MAC address to
 /// check if the server is working properly.
@@ -13,8 +14,67 @@ pub fn test(host: String, port: Option<u16>, raw_mac: String) {
 
     let full_addr = format!("{}:{}", host, port.unwrap_or(55300));
 
-    match PwmpClient::new(full_addr, mac, None, None, None) {
-        Ok(_) => info!("Client connected successfully!"),
-        Err(why) => error!("Failed to test connection: {why}"),
+    let mut client = match PwmpClient::new(full_addr, mac, None, None, None) {
+        Ok(client) => {
+            info!("Client connected successfully!");
+            client
+        }
+        Err(why) => {
+            error!("Failed to test connection: {why}");
+            exit(1);
+        }
     };
+
+    debug!("Pinging");
+    if !client.ping() {
+        error!("Ping test failed");
+        exit(1);
+    }
+
+    debug!("Requesting settings");
+    if let Err(why) = client.get_settings() {
+        error!("Failed to get settings: {why}");
+    }
+
+    debug!("Testing measurement posting");
+    if let Err(why) = client.post_measurements(dec!(0.00), 0, Some(0)) {
+        error!("Failed: {why}");
+        exit(1);
+    }
+
+    debug!("Testing stats posting");
+    if let Err(why) = client.post_stats(dec!(3.70), "<PWMP Test>", -50) {
+        error!("Failed: {why}");
+        exit(1);
+    }
+
+    debug!("Testing OTA API");
+    match client.check_os_update(Version::new(0, 0, 0)) {
+        Ok(UpdateStatus::Available(..)) => {
+            debug!("Testing update chunk request");
+            if let Err(why) = client.next_update_chunk(None) {
+                error!("Failed: {why}");
+                exit(1);
+            }
+
+            debug!("Testing firmware report");
+            if let Err(why) = client.report_firmware(false) {
+                error!("Failed: {why}");
+                exit(1);
+            }
+        }
+        Ok(_) => (),
+        Err(why) => {
+            error!("Failed: {why}");
+            exit(1);
+        }
+    }
+
+    debug!("Testing notification posting");
+    if let Err(why) = client.send_notification("Example notification") {
+        error!("Failed: {why}");
+        exit(1);
+    }
+
+    info!("Test passed!");
 }
