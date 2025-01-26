@@ -1,6 +1,10 @@
 use log::{debug, error, info};
-use pwmp_client::{ota::UpdateStatus, pwmp_msg::mac::Mac, PwmpClient};
-use pwmp_msg::{dec, version::Version, Decimal};
+use pwmp_client::{
+    ota::UpdateStatus,
+    pwmp_msg::mac::Mac,
+    pwmp_msg::{dec, version::Version, Decimal},
+    PwmpClient,
+};
 use std::{process::exit, str::FromStr};
 
 /// Try to connect to a server and authenticate with the given MAC address to

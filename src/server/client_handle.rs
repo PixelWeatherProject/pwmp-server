@@ -6,7 +6,7 @@ use super::{
 };
 use crate::error::Error;
 use log::{debug, error, warn};
-use pwmp_msg::{request::Request, response::Response, Message};
+use pwmp_client::pwmp_msg::{request::Request, response::Response, Message};
 use std::{io::Read, net::TcpStream, sync::Arc, time::Duration};
 
 #[allow(clippy::needless_pass_by_value)]

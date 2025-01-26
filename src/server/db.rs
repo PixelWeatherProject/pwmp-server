@@ -1,6 +1,6 @@
 use super::config::Config;
 use crate::error::Error;
-use pwmp_msg::{
+use pwmp_client::pwmp_msg::{
     aliases::{AirPressure, BatteryVoltage, Humidity, Rssi, Temperature},
     mac::Mac,
     settings::NodeSettings,

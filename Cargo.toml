@@ -14,11 +14,7 @@ repository = "https://github.com/PixelWeatherProject/pwmp-server"
 strip = true
 
 [dependencies]
-#pwmp-msg = { git = "ssh://git@github.com/PixelWeatherProject/pwmp-msg.git" }
-#pwmp-db-diesel = { git = "ssh://git@github.com/PixelWeatherProject/pwmp-db-diesel.git" }
-#pwmp-client = { git = "ssh://git@github.com/PixelWeatherProject/pwmp-client.git" }
-pwmp-msg = { path = "../pwmp-msg" }
-pwmp-client = { path = "../pwmp-client" }
+pwmp-client = { git = "ssh://git@github.com/PixelWeatherProject/pwmp-client.git", tag = "v2.0.1" }
 sqlx = { version = "0.8.3", default-features = false, features = [
     "postgres",
     "runtime-tokio",

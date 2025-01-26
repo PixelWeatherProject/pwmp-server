@@ -1,7 +1,9 @@
 use super::db::{DatabaseClient, FirmwareBlob, MeasurementId, NodeId};
 use crate::error::Error;
 use log::{debug, error, warn};
-use pwmp_msg::{mac::Mac, request::Request, response::Response, version::Version, Message};
+use pwmp_client::pwmp_msg::{
+    mac::Mac, request::Request, response::Response, version::Version, Message,
+};
 use std::{
     io::{Cursor, Read, Write},
     net::{SocketAddr, TcpStream},
