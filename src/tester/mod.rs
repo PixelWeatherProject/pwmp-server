@@ -9,7 +9,7 @@ use std::{process::exit, str::FromStr};
 
 /// Try to connect to a server and authenticate with the given MAC address to
 /// check if the server is working properly.
-#[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value, clippy::cognitive_complexity)]
 pub fn test(host: String, port: Option<u16>, raw_mac: String) {
     let Ok(mac) = Mac::from_str(&raw_mac) else {
         error!("Invalid MAC address format");
