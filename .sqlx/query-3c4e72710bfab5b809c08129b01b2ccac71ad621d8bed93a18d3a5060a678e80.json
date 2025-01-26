@@ -1,0 +1,43 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n  f.version_major,\n  f.version_middle,\n  f.version_minor,\n  f.firmware\nFROM\n  firmwares f\nWHERE\n  (\n    f.restrict_nodes IS NULL\n    OR $1 = ANY (f.restrict_nodes)\n  )\n  AND (\n    (f.version_major > $2)\n    OR (\n      f.version_major = $2\n      AND f.version_middle > $3\n    )\n    OR (\n      f.version_major = $2\n      AND f.version_middle = $3\n      AND f.version_minor > $4\n    )\n  )\n  AND NOT EXISTS (\n    SELECT\n      1\n    FROM\n      firmware_stats fs\n    WHERE\n      fs.node = $1\n      AND fs.to_version_major = f.version_major\n      AND fs.to_version_middle = f.version_middle\n      AND fs.to_version_minor = f.version_minor\n  );",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "version_major",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 1,
+        "name": "version_middle",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 2,
+        "name": "version_minor",
+        "type_info": "Int2"
+      },
+      {
+        "ordinal": 3,
+        "name": "firmware",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int2",
+        "Int2",
+        "Int2",
+        "Int2"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "3c4e72710bfab5b809c08129b01b2ccac71ad621d8bed93a18d3a5060a678e80"
+}
