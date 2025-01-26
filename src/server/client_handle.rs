@@ -7,25 +7,14 @@ use super::{
 use crate::error::Error;
 use log::{debug, error, warn};
 use pwmp_msg::{request::Request, response::Response, Message};
-use std::{
-    io::Read,
-    net::TcpStream,
-    panic,
-    sync::{
-        atomic::{AtomicU32, Ordering},
-        Arc,
-    },
-    time::Duration,
-};
+use std::{io::Read, net::TcpStream, sync::Arc, time::Duration};
 
 #[allow(clippy::needless_pass_by_value)]
 pub fn handle_client(
     client: TcpStream,
     db: &DatabaseClient,
-    connection_count: Arc<AtomicU32>,
     config: Arc<Config>,
 ) -> Result<(), Error> {
-    set_panic_hook(connection_count);
     let client = Client::new(client);
     let mut rate_limiter = RateLimiter::new(
         Duration::from_secs(config.rate_limits.time_frame),
@@ -168,14 +157,4 @@ fn handle_request(
         }
         Request::Bye => unreachable!(),
     }
-}
-
-fn set_panic_hook(connection_count: Arc<AtomicU32>) {
-    let default = panic::take_hook();
-
-    panic::set_hook(Box::new(move |panic_info| {
-        warn!("A client thread has paniced");
-        connection_count.fetch_sub(1, Ordering::Relaxed);
-        default(panic_info);
-    }));
 }

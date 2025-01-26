@@ -3,6 +3,7 @@ use crate::server::client_handle::handle_client;
 use log::{debug, error, warn};
 use std::{
     net::TcpListener,
+    panic,
     sync::{
         atomic::{AtomicU32, Ordering},
         Arc,
@@ -11,9 +12,10 @@ use std::{
     time::Duration,
 };
 
+static CONNECTIONS: AtomicU32 = AtomicU32::new(0);
+
 #[allow(clippy::needless_pass_by_value)]
 pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>) {
-    let connections = Arc::new(AtomicU32::new(0));
     let shared_db = Arc::new(db);
     let mut rate_limiter = RateLimiter::new(
         Duration::from_secs(config.rate_limits.time_frame),
@@ -21,7 +23,7 @@ pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>
     );
 
     for client in server.incoming() {
-        if connections.load(Ordering::Relaxed) == config.limits.max_devices {
+        if CONNECTIONS.load(Ordering::Relaxed) == config.limits.max_devices {
             warn!("Maximum number of connections reached, ignoring connection");
             continue;
         }
@@ -40,22 +42,22 @@ pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>
             continue;
         };
 
-        connections.fetch_add(1, Ordering::Relaxed);
-        if connections.load(Ordering::Relaxed) == config.limits.max_devices {
+        CONNECTIONS.fetch_add(1, Ordering::Relaxed);
+        if CONNECTIONS.load(Ordering::Relaxed) == config.limits.max_devices {
             warn!("Reached maximum number of connections, new connections will be blocked");
         }
 
         {
             let config = Arc::clone(&config);
-            let connections = connections.clone();
             let db = shared_db.clone();
 
-            debug!("Connection count: {}", connections.load(Ordering::SeqCst));
+            debug!("Connection count: {}", CONNECTIONS.load(Ordering::SeqCst));
 
             thread::spawn(move || {
                 debug!("New client: {}", peer_addr);
+                set_panic_hook();
 
-                match handle_client(client, &db, connections.clone(), config) {
+                match handle_client(client, &db, config) {
                     Ok(()) => {
                         debug!("{}: Handled successfully", peer_addr);
                     }
@@ -64,8 +66,18 @@ pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>
                     }
                 }
 
-                connections.fetch_sub(1, Ordering::Relaxed);
+                CONNECTIONS.fetch_sub(1, Ordering::Relaxed);
             });
         }
     }
+}
+
+fn set_panic_hook() {
+    let default = panic::take_hook();
+
+    panic::set_hook(Box::new(move |panic_info| {
+        warn!("A client thread has paniced");
+        CONNECTIONS.fetch_sub(1, Ordering::Relaxed);
+        default(panic_info);
+    }));
 }
