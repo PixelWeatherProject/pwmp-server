@@ -42,6 +42,7 @@ pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>
             continue;
         };
 
+        debug!("Incrementing connection count");
         CONNECTIONS.fetch_add(1, Ordering::Relaxed);
         if CONNECTIONS.load(Ordering::Relaxed) == config.limits.max_devices {
             warn!("Reached maximum number of connections, new connections will be blocked");
@@ -50,13 +51,15 @@ pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>
         {
             let config = Arc::clone(&config);
             let db = shared_db.clone();
-
             debug!("Connection count: {}", CONNECTIONS.load(Ordering::SeqCst));
 
+            debug!("Starting client thread");
             thread::spawn(move || {
                 debug!("New client: {}", peer_addr);
+                debug!("Setting panic hook for thread");
                 set_panic_hook();
 
+                debug!("Starting client handle");
                 match handle_client(client, &db, config) {
                     Ok(()) => {
                         debug!("{}: Handled successfully", peer_addr);
@@ -66,6 +69,7 @@ pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>
                     }
                 }
 
+                debug!("Decrementing connection count");
                 CONNECTIONS.fetch_sub(1, Ordering::Relaxed);
             });
         }
