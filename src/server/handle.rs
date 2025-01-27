@@ -29,7 +29,7 @@ pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>
         }
 
         if rate_limiter.hit() {
-            warn!("Rate limiting");
+            warn!("Exceeded rate limit for accepting incoming connections");
             continue;
         }
 
@@ -38,7 +38,7 @@ pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>
             continue;
         };
         let Ok(peer_addr) = client.peer_addr() else {
-            error!("Failed to get a clients peer address information");
+            error!("Failed to get a client's peer address information");
             continue;
         };
 
