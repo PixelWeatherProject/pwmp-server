@@ -7,7 +7,12 @@ use super::{
 use crate::error::Error;
 use log::{debug, error, warn};
 use pwmp_client::pwmp_msg::{request::Request, response::Response, Message};
-use std::{io::Read, net::TcpStream, sync::Arc, time::Duration};
+use std::{
+    io::{self, Read},
+    net::TcpStream,
+    sync::Arc,
+    time::Duration,
+};
 
 #[allow(clippy::needless_pass_by_value)]
 pub fn handle_client(
@@ -15,7 +20,7 @@ pub fn handle_client(
     db: &DatabaseClient,
     config: Arc<Config>,
 ) -> Result<(), Error> {
-    let client = Client::new(client);
+    let client = Client::new(client)?;
     let mut rate_limiter = RateLimiter::new(
         Duration::from_secs(config.rate_limits.time_frame),
         config.rate_limits.max_requests,
@@ -23,7 +28,22 @@ pub fn handle_client(
     let mut client = client.authorize(db)?;
 
     loop {
-        let request = client.await_request()?;
+        if client.time_since_last_interaction() >= config.max_stall_time / 2 {
+            warn!("{}: Is stalling", client.id());
+        }
+
+        if client.time_since_last_interaction() >= config.max_stall_time {
+            error!("{}: Stalled for too long, kicking", client.id());
+            return Err(Error::StallTimeExceeded);
+        }
+
+        let request = match client.await_request() {
+            Ok(req) => req,
+            Err(Error::Io(err)) if err.kind() == io::ErrorKind::TimedOut => {
+                continue;
+            }
+            Err(other) => return Err(other),
+        };
 
         if rate_limiter.hit() {
             error!("{}: Exceeded request limits", client.id());

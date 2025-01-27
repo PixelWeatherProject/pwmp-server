@@ -1,18 +1,23 @@
 #![allow(clippy::module_name_repetitions)]
 
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, DurationSeconds};
 use std::{
     net::{Ipv4Addr, SocketAddrV4},
     path::PathBuf,
+    time::Duration,
 };
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[serde_as]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     pub server: ServerConfig,
     pub database: DatabaseConfig,
     pub limits: LimitsConfig,
     #[serde(rename = "rate_limiter")]
     pub rate_limits: RateLimitConfig,
+    #[serde_as(as = "DurationSeconds")]
+    pub max_stall_time: Duration,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -42,6 +47,18 @@ pub struct RateLimitConfig {
     pub time_frame: u64,
     pub max_requests: usize,
     pub max_connections: usize,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            server: Default::default(),
+            database: Default::default(),
+            limits: Default::default(),
+            rate_limits: Default::default(),
+            max_stall_time: Duration::from_secs(10),
+        }
+    }
 }
 
 impl Default for RateLimitConfig {

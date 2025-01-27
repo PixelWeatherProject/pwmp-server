@@ -45,4 +45,8 @@ pub enum Error {
     /// Authentication error.
     #[error("Node authentication failed")]
     Auth,
+
+    /// Node stalled for too long.
+    #[error("Node stalled for too long")]
+    StallTimeExceeded,
 }
