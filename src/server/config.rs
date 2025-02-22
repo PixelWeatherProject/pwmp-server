@@ -52,10 +52,10 @@ pub struct RateLimitConfig {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            server: Default::default(),
-            database: Default::default(),
-            limits: Default::default(),
-            rate_limits: Default::default(),
+            server: ServerConfig::default(),
+            database: DatabaseConfig::default(),
+            limits: LimitsConfig::default(),
+            rate_limits: RateLimitConfig::default(),
             max_stall_time: Duration::from_secs(10),
         }
     }
