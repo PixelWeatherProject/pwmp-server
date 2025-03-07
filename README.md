@@ -56,6 +56,18 @@ TODO:
 
 Service management on Windows is **not** and **will not** be supported.
 
-# Portability
-Due to some dependencies relying on glibc, you will not be able to run the binary on distributions like Alpine Linux (`gcompat` will **not** work).
-For other distributions, you should install `libpq`.
+# Compiling caveats and portability
+Due to some dependencies relying on glibc, you may not be able to run the binary on distributions like Alpine Linux (`gcompat` may **not** work). Furthermore, due to the PostgreSQL library (`libpq`) relying on `pthread`, you will not be able to compile for `musl` targets.
+
+### Platform support table
+**Note**: This incomplete and may change in the future!
+|          **Target**           | **Supported** | **`cargo-cross` support** |
+| :---------------------------: | :-----------: | :-----------------------: |
+|  `x86_64-unknown-linux-gnu`   |       ✅       |             ✅             |
+|  `x86_64-unknown-linux-musl`  |       ❌       |             ❌             |
+|  `aarch64-unknown-linux-gnu`  |       ✅       |             ✅             |
+|    `aarch64-apple-darwin`     |       ✅       |             ❌             |
+| `aarch64-unknown-linux-musl`  |       ❌       |             ❌             |
+| `armv7-unknown-linux-gnueabi` |       ❌       |             ❌             |
+
+In general, *x86* and *aarch64* are well-supported with *Linux*. macOS *should* theoretically work. Windows is **not** supported and there are no plans for it.
