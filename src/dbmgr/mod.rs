@@ -27,7 +27,7 @@ pub fn main(cmd: DatabaseCommand, config: &Config) {
                 Err(why) => error!("Failed to execute migrations: {why}"),
             }
         }
-        DatabaseCommand::Erase => {
+        DatabaseCommand::Erase { keep_devices } => {
             let client = match DatabaseClient::new(config) {
                 Ok(conn) => conn,
                 Err(why) => {
@@ -39,7 +39,7 @@ pub fn main(cmd: DatabaseCommand, config: &Config) {
             info!("Connected to the database");
             confirm_erase(&config.database.name, &config.database.host);
 
-            match client.erase() {
+            match client.erase(keep_devices) {
                 Ok(()) => info!("Success!"),
                 Err(why) => error!("Failed to erase database: {why}"),
             };

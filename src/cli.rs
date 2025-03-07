@@ -77,5 +77,9 @@ pub enum DatabaseCommand {
     Init,
 
     /// Completely ERASE ALL DATA from the database (*UNRECOVERABLE*)
-    Erase,
+    Erase {
+        /// Keeps configured devices in the database
+        #[arg(short, long)]
+        keep_devices: bool,
+    },
 }

@@ -234,8 +234,18 @@ impl DatabaseClient {
         Ok(())
     }
 
-    pub fn erase(&self) -> Result<(), Error> {
-        query!(self.rt, self.pool, "queries/erase_database.sql", execute,)?;
+    pub fn erase(&self, keep_devices: bool) -> Result<(), Error> {
+        if keep_devices {
+            query!(
+                self.rt,
+                self.pool,
+                "queries/erase_database_keep_devices.sql",
+                execute,
+            )?;
+        } else {
+            query!(self.rt, self.pool, "queries/erase_database.sql", execute,)?;
+        }
+
         Ok(())
     }
 
