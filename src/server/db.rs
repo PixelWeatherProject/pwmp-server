@@ -234,12 +234,28 @@ impl DatabaseClient {
         Ok(())
     }
 
-    pub fn erase(&self, keep_devices: bool) -> Result<(), Error> {
-        if keep_devices {
+    pub fn erase(&self, content_only: bool, keep_devices: bool) -> Result<(), Error> {
+        if content_only {
+            if keep_devices {
+                query!(
+                    self.rt,
+                    self.pool,
+                    "queries/erase_database_content_keep_devices.sql",
+                    execute,
+                )?;
+            } else {
+                query!(
+                    self.rt,
+                    self.pool,
+                    "queries/erase_database_content.sql",
+                    execute,
+                )?;
+            }
+
             query!(
                 self.rt,
                 self.pool,
-                "queries/erase_database_keep_devices.sql",
+                "queries/drop_migrations_table.sql",
                 execute,
             )?;
         } else {

@@ -27,7 +27,10 @@ pub fn main(cmd: DatabaseCommand, config: &Config) {
                 Err(why) => error!("Failed to execute migrations: {why}"),
             }
         }
-        DatabaseCommand::Erase { keep_devices } => {
+        DatabaseCommand::Erase {
+            content_only,
+            keep_devices,
+        } => {
             let client = match DatabaseClient::new(config) {
                 Ok(conn) => conn,
                 Err(why) => {
@@ -39,7 +42,7 @@ pub fn main(cmd: DatabaseCommand, config: &Config) {
             info!("Connected to the database");
             confirm_erase(&config.database.name, &config.database.host);
 
-            match client.erase(keep_devices) {
+            match client.erase(content_only, keep_devices) {
                 Ok(()) => info!("Success!"),
                 Err(why) => error!("Failed to erase database: {why}"),
             };
@@ -50,7 +53,7 @@ pub fn main(cmd: DatabaseCommand, config: &Config) {
 fn confirm_erase(database_name: &str, host: &str) {
     const KEY: &str = "yes, do it!";
 
-    println!("\nWARNING: THIS ACTION WILL COMPLETELE ERASE ALL DATA AND TABLE FROM THE DATABSE \"{database_name}\" ON \"{host}\"!!!\n");
+    println!("\nWARNING: THIS ACTION WILL COMPLETELE ERASE ALL DATA AND (IF SPECIFIED) TABLES FROM THE DATABSE \"{database_name}\" ON \"{host}\"!!!\n");
     println!("\nTYPE \"{KEY}\" TO CONFIRM THIS OPERATION!");
 
     let mut buf = String::new();

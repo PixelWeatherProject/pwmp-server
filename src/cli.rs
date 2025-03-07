@@ -78,8 +78,12 @@ pub enum DatabaseCommand {
 
     /// Completely ERASE ALL DATA from the database (*UNRECOVERABLE*)
     Erase {
-        /// Keeps configured devices in the database
-        #[arg(short, long)]
+        /// Only remove rows, not tables
+        #[arg(long)]
+        content_only: bool,
+
+        /// Keep configured devices
+        #[arg(long)]
         keep_devices: bool,
     },
 }
