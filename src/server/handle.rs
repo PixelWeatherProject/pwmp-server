@@ -5,8 +5,8 @@ use std::{
     net::TcpListener,
     panic,
     sync::{
-        atomic::{AtomicU32, Ordering},
         Arc,
+        atomic::{AtomicU32, Ordering},
     },
     thread,
     time::Duration,
@@ -65,7 +65,7 @@ pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>
                         debug!("{}: Handled successfully", peer_addr);
                     }
                     Err(why) => {
-                        error!("{peer_addr}: {why}");
+                        error!("{peer_addr}: Failed to handle: {why}");
                     }
                 }
 
