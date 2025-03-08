@@ -6,7 +6,7 @@ use pwmp_client::pwmp_msg::{
 };
 use std::{
     io::{Cursor, Read, Write},
-    net::{SocketAddr, TcpStream},
+    net::{Shutdown, SocketAddr, TcpStream},
     time::{Duration, Instant},
 };
 
@@ -52,6 +52,12 @@ impl<S> Client<S> {
         self.await_next_message()?
             .as_request()
             .ok_or(Error::NotRequest)
+    }
+
+    pub fn shutdown(&self) -> Result<()> {
+        debug!("Attempting to shutdown socket");
+        self.socket.shutdown(Shutdown::Both)?;
+        Ok(())
     }
 
     fn peer_addr(&self) -> Option<SocketAddr> {

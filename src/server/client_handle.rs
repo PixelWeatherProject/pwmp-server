@@ -52,6 +52,7 @@ pub fn handle_client(
 
         if request == Request::Bye {
             debug!("{}: Bye", client.id());
+            client.shutdown()?;
             break;
         }
 
