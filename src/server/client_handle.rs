@@ -6,7 +6,7 @@ use super::{
 };
 use crate::error::Error;
 use log::{debug, error, warn};
-use pwmp_client::pwmp_msg::{request::Request, response::Response, Message};
+use pwmp_client::pwmp_msg::{Message, request::Request, response::Response};
 use std::{
     io::{self, Read},
     net::TcpStream,
