@@ -2,7 +2,7 @@ use super::db::{DatabaseClient, FirmwareBlob, MeasurementId, NodeId};
 use crate::error::Error;
 use log::{debug, error, warn};
 use pwmp_client::pwmp_msg::{
-    mac::Mac, request::Request, response::Response, version::Version, Message,
+    Message, mac::Mac, request::Request, response::Response, version::Version,
 };
 use std::{
     io::{Cursor, Read, Write},
@@ -68,6 +68,7 @@ impl<S> Client<S> {
         );
         self.socket.write_all(&message.serialize())?;
         self.socket.flush()?;
+        debug!("Response sent");
 
         Ok(())
     }
