@@ -15,9 +15,6 @@ strip = true
 
 [dependencies]
 pwmp-client = { git = "ssh://git@github.com/PixelWeatherProject/pwmp-client.git", tag = "v2.0.2" }
-tokio = { version = "1.43.0", default-features = false, features = [
-    "rt-multi-thread",
-] }
 clap = { version = "4.5.26", features = ["derive"] }
 confy = { version = "0.6.1", default-features = false, features = [
     "yaml_conf",
@@ -37,5 +34,5 @@ rust_decimal = { version = "1.36.0", features = ["db-diesel-postgres"] }
 users = { version = "0.11.0", default-features = false }
 serde_with = "3.12.0"
 color-print = "0.3.7"
-mio = "1.0.3"
+mio = { version = "1.0.3", features = ["os-poll", "net"] }
 postgres = "0.19.10"

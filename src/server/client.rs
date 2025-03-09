@@ -1,12 +1,13 @@
-use super::db::{DatabaseClient, FirmwareBlob, MeasurementId, NodeId};
+use super::db::{FirmwareBlob, MeasurementId, NodeId};
 use crate::error::Error;
-use log::{debug, error, warn};
+use log::warn;
+use mio::net::TcpStream;
 use pwmp_client::pwmp_msg::{
     Message, mac::Mac, request::Request, response::Response, version::Version,
 };
 use std::{
     io::{Cursor, Read, Write},
-    net::{Shutdown, SocketAddr, TcpStream},
+    net::Shutdown,
     time::{Duration, Instant},
 };
 
@@ -14,14 +15,25 @@ const RCV_BUFFER_SIZE: usize = 128;
 type Result<T> = ::std::result::Result<T, Error>;
 
 #[derive(Debug)]
-pub struct Client<S> {
+pub struct Client {
     socket: TcpStream,
     buf: [u8; RCV_BUFFER_SIZE],
-    state: S,
+    state: ClientState,
     last_interaction: Instant,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
+pub enum ClientState {
+    Unathenticated,
+    Authenticated {
+        id: NodeId,
+        mac: Mac,
+        last_submit: Option<MeasurementId>,
+        update_state: UpdateState,
+    },
+}
+
+#[derive(Debug, PartialEq, Eq)]
 pub enum UpdateState {
     Unchecked,
     UpToDate,
@@ -32,192 +44,123 @@ pub enum UpdateState {
     },
 }
 
-#[derive(Debug)]
-pub struct Unathenticated;
+impl Client {
+    pub fn new(socket: TcpStream) -> Self {
+        Self {
+            socket,
+            buf: [0; RCV_BUFFER_SIZE],
+            state: ClientState::Unathenticated,
+            last_interaction: Instant::now(),
+        }
+    }
 
-#[derive(Debug)]
-pub struct Authenticated {
-    id: NodeId,
-    mac: Mac,
-    last_submit: Option<MeasurementId>,
-    update_state: UpdateState,
-}
+    /// Some string that identifies the client.
+    /// The result depends on whether the client is authenticated or not.
+    ///
+    /// ### Authenticated clients
+    /// The node ID is used as the ID.
+    ///
+    /// ### Unauthenticated clients
+    /// The peer address and port are used.
+    /// If this information cannot be requested from the OS, the result will default to
+    /// a single question-mark (`?`).
+    ///
+    pub fn debug_id(&self) -> String {
+        match self.state {
+            ClientState::Unathenticated => self
+                .socket
+                .peer_addr()
+                .map(|result| format!("{}:{}", result.ip(), result.port()))
+                .unwrap_or_else(|_| "?".to_string()),
+            ClientState::Authenticated { id, .. } => format!("#{id}"),
+        }
+    }
 
-impl<S> Client<S> {
-    pub fn time_since_last_interaction(&self) -> Duration {
+    pub fn id(&self) -> Result<NodeId> {
+        let ClientState::Authenticated { id, .. } = self.state else {
+            warn!("Client::id() called on unauthenticated client");
+            return Err(Error::ClientNotAuthenticated);
+        };
+
+        Ok(id)
+    }
+
+    /// Return a mutable reference to the client's TCP stream.
+    pub const fn socket(&mut self) -> &mut TcpStream {
+        &mut self.socket
+    }
+
+    /// Time since the client has last communicated with the server.
+    pub fn stall_time(&self) -> Duration {
         self.last_interaction.elapsed()
     }
 
-    pub fn await_request(&mut self) -> Result<Request> {
-        self.await_next_message()?
-            .as_request()
-            .ok_or(Error::NotRequest)
+    pub fn is_authenticated(&self) -> bool {
+        self.state != ClientState::Unathenticated
     }
 
-    pub fn shutdown(&self) -> Result<()> {
-        debug!("Attempting to shutdown socket");
-        self.socket.shutdown(Shutdown::Both)?;
-        Ok(())
-    }
+    pub fn get_hello(&mut self) -> Result<Mac> {
+        let message = self.get_request()?;
 
-    fn peer_addr(&self) -> Option<SocketAddr> {
-        self.socket.peer_addr().ok()
-    }
-
-    pub fn send_response(&mut self, resp: Response) -> Result<()> {
-        let message = Message::Response(resp);
-        debug!(
-            "{}: responding with {:?} ({} bytes)",
-            self.peer_addr_str(),
-            message.response().unwrap(),
-            message.size()
-        );
-        self.socket.write_all(&message.serialize())?;
-        self.socket.flush()?;
-        debug!("Response sent");
-
-        Ok(())
-    }
-
-    fn peer_addr_str(&self) -> String {
-        self.peer_addr()
-            .map_or_else(|| "Unknown".to_string(), |addr| addr.to_string())
-    }
-
-    fn await_next_message(&mut self) -> Result<Message> {
-        let read = self.socket.read(&mut self.buf)?;
-        if read == 0 {
-            return Err(Error::Quit);
-        }
-
-        self.last_interaction = Instant::now();
-        let message = Message::deserialize(&self.buf[..read]).ok_or(Error::MessageParse)?;
-
-        Ok(message)
-    }
-}
-
-impl Client<Unathenticated> {
-    pub fn new(socket: TcpStream) -> Result<Self> {
-        socket.set_read_timeout(Some(Duration::from_secs(5)))?;
-
-        Ok(Self {
-            socket,
-            buf: [0; RCV_BUFFER_SIZE],
-            state: Unathenticated,
-            last_interaction: Instant::now(),
-        })
-    }
-
-    pub fn authorize(mut self, db: &DatabaseClient) -> Result<Client<Authenticated>> {
-        debug!("{}: Awaiting greeting", self.peer_addr_str());
-        let mac = self.handle_hello()?;
-
-        debug!("{}: Is {}?", self.peer_addr_str(), mac);
-
-        match db.authorize_device(&mac) {
-            Ok(Some(id)) => {
-                let mut authorized_client = Client::<Authenticated>::new(self, id, mac);
-                debug!(
-                    "Device {} authorized as node #{id}",
-                    authorized_client.mac()
-                );
-
-                authorized_client.send_response(Response::Ok)?;
-                Ok(authorized_client)
-            }
-            Ok(None) => {
-                warn!("Device {} is not authorized", self.peer_addr_str());
-                self.send_response(Response::Reject)?;
-                Err(Error::Auth)
-            }
-            Err(why) => {
-                error!(
-                    "Could not perform authentication of {}",
-                    self.peer_addr_str()
-                );
-                self.send_response(Response::Reject)?;
-                Err(why)
-            }
-        }
-    }
-
-    fn handle_hello(&mut self) -> Result<Mac> {
-        let req = self.await_request()?;
-        let Request::Hello { mac } = req else {
+        let Request::Hello { mac } = message else {
             return Err(Error::NotHello);
         };
 
         Ok(mac)
     }
+
+    pub fn authorize(&mut self, id: NodeId, mac: Mac) {
+        self.state = ClientState::Authenticated {
+            id,
+            mac,
+            last_submit: None,
+            update_state: UpdateState::Unchecked,
+        }
+    }
+
+    pub fn get_request(&mut self) -> Result<Request> {
+        self.get_message()?.as_request().ok_or(Error::NotRequest)
+    }
+
+    pub fn send_response(&mut self, response: Response) -> Result<()> {
+        self.socket
+            .write_all(&Message::Response(response).serialize())?;
+        Ok(())
+    }
+
+    pub fn last_submit(&self) -> Result<Option<MeasurementId>> {
+        let ClientState::Authenticated { last_submit, .. } = self.state else {
+            warn!("Client::last_submit() called on unauthenticated client");
+            return Err(Error::ClientNotAuthenticated);
+        };
+
+        Ok(last_submit)
+    }
+
+    pub fn set_last_submit(&mut self, id: MeasurementId) -> Result<()> {
+        let ClientState::Authenticated {
+            ref mut last_submit,
+            ..
+        } = self.state
+        else {
+            warn!("Client::set_last_submit() called on unauthenticated client");
+            return Err(Error::ClientNotAuthenticated);
+        };
+
+        *last_submit = Some(id);
+        Ok(())
+    }
+
+    fn get_message(&mut self) -> Result<Message> {
+        let amount = self.socket.read(&mut self.buf)?;
+        Message::deserialize(&self.buf[..amount]).ok_or(Error::MessageParse)
+    }
 }
 
-impl Client<Authenticated> {
-    fn new(client: Client<Unathenticated>, id: NodeId, mac: Mac) -> Self {
-        Self {
-            socket: client.socket,
-            buf: client.buf,
-            state: Authenticated {
-                id,
-                mac,
-                last_submit: None,
-                update_state: UpdateState::Unchecked,
-            },
-            last_interaction: Instant::now(),
-        }
-    }
-
-    pub const fn id(&self) -> NodeId {
-        self.state.id
-    }
-
-    pub const fn mac(&self) -> &Mac {
-        &self.state.mac
-    }
-
-    pub const fn last_submit(&self) -> Option<MeasurementId> {
-        self.state.last_submit
-    }
-
-    pub const fn set_last_submit(&mut self, value: MeasurementId) {
-        self.state.last_submit = Some(value);
-    }
-
-    pub fn mark_up_to_date(&mut self) {
-        self.state.update_state = UpdateState::UpToDate;
-    }
-
-    pub fn store_update_check_result(
-        &mut self,
-        current_version: Version,
-        new_version: Version,
-        blob: FirmwareBlob,
-    ) {
-        self.state.update_state = UpdateState::Available {
-            current: current_version,
-            new: new_version,
-            blob: Cursor::new(blob),
-        };
-    }
-
-    pub const fn update_chunk(&mut self) -> Option<&mut Cursor<Box<[u8]>>> {
-        match self.state.update_state {
-            UpdateState::Available { ref mut blob, .. } => Some(blob),
-            _ => None,
-        }
-    }
-
-    pub const fn current_version(&self) -> Option<Version> {
-        match self.state.update_state {
-            UpdateState::Available { current, .. } => Some(current),
-            _ => None,
-        }
-    }
-
-    pub const fn update_version(&self) -> Option<Version> {
-        match self.state.update_state {
-            UpdateState::Available { new, .. } => Some(new),
-            _ => None,
+impl Drop for Client {
+    fn drop(&mut self) {
+        if let Err(why) = self.socket.shutdown(Shutdown::Both) {
+            warn!("Failed to shut down client socket: {why}");
         }
     }
 }

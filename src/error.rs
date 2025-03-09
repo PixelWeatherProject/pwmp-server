@@ -45,4 +45,13 @@ pub enum Error {
     /// Node stalled for too long.
     #[error("Node stalled for too long")]
     StallTimeExceeded,
+
+    /// Too many requests.
+    #[error("Too many requests")]
+    TooManyRequests,
+
+    ///The requested operation requires an authenticated client, but the client was
+    /// not authenticated.
+    #[error("The requested operation requires an authenticated client")]
+    ClientNotAuthenticated,
 }

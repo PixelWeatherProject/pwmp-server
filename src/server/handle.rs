@@ -1,87 +1,124 @@
-use super::{config::Config, db::DatabaseClient, rate_limit::RateLimiter};
-use crate::server::client_handle::handle_client;
-use log::{debug, error, warn};
+use super::{
+    client::Client, client_handle, config::Config, db::DatabaseClient, rate_limit::RateLimiter,
+};
+use crate::error::Error;
+use log::{debug, error};
+use mio::{Events, Interest, Poll, Token, net::TcpListener};
 use std::{
-    net::TcpListener,
-    panic,
-    sync::{
-        Arc,
-        atomic::{AtomicU32, Ordering},
-    },
-    thread,
-    time::Duration,
+    io::ErrorKind,
+    time::{Duration, Instant},
 };
 
-static CONNECTIONS: AtomicU32 = AtomicU32::new(0);
+const SERVER_TOKEN: Token = Token(0);
+const MGMT_TASK_TIMER: Duration = Duration::from_secs(1);
 
 #[allow(clippy::needless_pass_by_value)]
-pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>) {
-    let shared_db = Arc::new(db);
+pub fn server_loop(
+    mut server: TcpListener,
+    mut db: DatabaseClient,
+    config: Config,
+) -> Result<(), Error> {
+    let mut clients: Vec<Client> = Vec::new();
     let mut rate_limiter = RateLimiter::new(
         Duration::from_secs(config.rate_limits.time_frame),
-        config.rate_limits.max_connections,
+        config.rate_limits.max_requests,
     );
+    let mut events = Events::with_capacity(1024);
+    let mut poller = Poll::new()?;
+    let mut reregister = false;
+    let mut last_mgmt_task_run = Instant::now();
 
-    for client in server.incoming() {
-        if CONNECTIONS.load(Ordering::Relaxed) == config.limits.max_devices {
-            warn!("Maximum number of connections reached, ignoring connection");
-            continue;
+    poller
+        .registry()
+        .register(&mut server, SERVER_TOKEN, Interest::READABLE)?;
+
+    loop {
+        if reregister {
+            poller
+                .registry()
+                .reregister(&mut server, SERVER_TOKEN, Interest::READABLE)?;
+
+            for (token, client) in clients.iter_mut().enumerate() {
+                poller
+                    .registry()
+                    .register(client.socket(), Token(token), Interest::READABLE)?;
+            }
         }
 
-        if rate_limiter.hit() {
-            warn!("Exceeded rate limit for accepting incoming connections");
-            continue;
+        let result = poller.poll(&mut events, Some(Duration::from_secs(1)));
+
+        match result {
+            Ok(()) => (),
+            Err(why) if why.kind() == ErrorKind::TimedOut => (),
+            Err(why) => panic!("Polling failed: {why}"),
         }
 
-        let Ok(client) = client else {
-            warn!("A client failed to connect");
-            continue;
-        };
-        let Ok(peer_addr) = client.peer_addr() else {
-            error!("Failed to get a client's peer address information");
-            continue;
-        };
+        /* Handle clients */
 
-        debug!("Incrementing connection count");
-        CONNECTIONS.fetch_add(1, Ordering::Relaxed);
-        if CONNECTIONS.load(Ordering::Relaxed) == config.limits.max_devices {
-            warn!("Reached maximum number of connections, new connections will be blocked");
-        }
+        let mut pending_removal = Vec::new();
 
-        {
-            let config = Arc::clone(&config);
-            let db = shared_db.clone();
-            debug!("Connection count: {}", CONNECTIONS.load(Ordering::SeqCst));
+        for event in &events {
+            if !event.is_readable() {
+                let client = &clients[event.token().0];
+                debug!("I/O error with client: {client:?}");
 
-            debug!("Starting client thread");
-            thread::spawn(move || {
-                debug!("New client: {}", peer_addr);
-                debug!("Setting panic hook for thread");
-                set_panic_hook();
+                pending_removal.push(event.token());
+            }
 
-                debug!("Starting client handle");
-                match handle_client(client, &db, config) {
-                    Ok(()) => {
-                        debug!("{}: Handled successfully", peer_addr);
-                    }
-                    Err(why) => {
-                        error!("{peer_addr}: Failed to handle: {why}");
+            match event.token() {
+                SERVER_TOKEN => {
+                    if clients.len() == config.rate_limits.max_connections {
+                        error!("Too many clients, not accepting connection");
+                    } else {
+                        handle_connection_request(&server, &mut clients)
                     }
                 }
+                other => {
+                    match client_handle::handle_client(
+                        &mut clients[other.0],
+                        &mut db,
+                        &mut rate_limiter,
+                    ) {
+                        Ok(()) => debug!("Client handled successfully"),
+                        Err(why) => {
+                            error!("Failed to handle client: {why}");
+                            pending_removal.push(other);
+                        }
+                    }
+                }
+            }
+        }
 
-                debug!("Decrementing connection count");
-                CONNECTIONS.fetch_sub(1, Ordering::Relaxed);
-            });
+        if !pending_removal.is_empty() {
+            debug!("Cleaning up {} clients", pending_removal.len());
+
+            for token in pending_removal {
+                clients.remove(token.0);
+            }
+        }
+
+        handle_mgmt_tasks(&mut last_mgmt_task_run, &mut clients, &config);
+
+        if !reregister {
+            reregister = true;
         }
     }
 }
 
-fn set_panic_hook() {
-    let default = panic::take_hook();
+fn handle_mgmt_tasks(last_mgmt_task_run: &mut Instant, clients: &mut Vec<Client>, config: &Config) {
+    if last_mgmt_task_run.elapsed() <= MGMT_TASK_TIMER {
+        return;
+    }
 
-    panic::set_hook(Box::new(move |panic_info| {
-        warn!("A client thread has paniced");
-        CONNECTIONS.fetch_sub(1, Ordering::Relaxed);
-        default(panic_info);
-    }));
+    // Kick clients that are stalling
+    clients.retain(|client| client.stall_time() <= config.max_stall_time);
+
+    // TODO: Implement more as needed...
+}
+
+fn handle_connection_request(server: &TcpListener, clients: &mut Vec<Client>) {
+    match server.accept() {
+        Ok((stream, _)) => clients.push(Client::new(stream)),
+        Err(why) => error!("Failed to accept connection: {why}"),
+    }
 }

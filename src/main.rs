@@ -47,7 +47,7 @@ fn main() -> Result<(), error::Error> {
         Some(Command::Service { command }) => svcmgr::main(command),
         Some(Command::Database { command }) => dbmgr::main(command, &config),
         Some(Command::Test { host, mac, port }) => tester::test(host, port, mac),
-        None => server::main(config),
+        None => server::main(config)?,
     }
 
     Ok(())

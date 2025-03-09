@@ -1,73 +1,90 @@
-use super::{
-    client::{Authenticated, Client},
-    config::Config,
-    db::DatabaseClient,
-    rate_limit::RateLimiter,
-};
+use super::{client::Client, db::DatabaseClient, rate_limit::RateLimiter};
 use crate::error::Error;
 use log::{debug, error, warn};
 use pwmp_client::pwmp_msg::{Message, request::Request, response::Response};
-use std::{
-    io::{self, Read},
-    net::TcpStream,
-    sync::Arc,
-    time::Duration,
-};
 
 #[allow(clippy::needless_pass_by_value)]
 pub fn handle_client(
-    client: TcpStream,
-    db: &DatabaseClient,
-    config: Arc<Config>,
+    client: &mut Client,
+    db: &mut DatabaseClient,
+    rate_limiter: &mut RateLimiter,
 ) -> Result<(), Error> {
-    let client = Client::new(client)?;
-    let mut rate_limiter = RateLimiter::new(
-        Duration::from_secs(config.rate_limits.time_frame),
-        config.rate_limits.max_requests,
-    );
-    let mut client = client.authorize(db)?;
-
-    loop {
-        if client.time_since_last_interaction() >= config.max_stall_time / 2 {
-            warn!("{}: Is stalling", client.id());
-        }
-
-        if client.time_since_last_interaction() >= config.max_stall_time {
-            error!("{}: Stalled for too long, kicking", client.id());
-            return Err(Error::StallTimeExceeded);
-        }
-
-        let request = match client.await_request() {
-            Ok(req) => req,
-            Err(Error::Io(err)) if err.kind() == io::ErrorKind::TimedOut => {
-                continue;
-            }
-            Err(other) => return Err(other),
-        };
-
-        if rate_limiter.hit() {
-            error!("{}: Exceeded request limits", client.id());
-            break;
-        }
-
-        if request == Request::Bye {
-            debug!("{}: Bye", client.id());
-            client.shutdown()?;
-            break;
-        }
-
-        let response = handle_request(request, &mut client, db)?.ok_or(Error::BadRequest)?;
-
-        client.send_response(response)?;
+    if rate_limiter.hit() {
+        return Err(Error::TooManyRequests);
     }
 
+    if client.is_authenticated() {
+        return handle_known_client(client, db);
+    } else {
+        return handle_unknown_client(client, db);
+    }
+
+    /*
+        let client = Client::new(client)?;
+        let mut rate_limiter = RateLimiter::new(
+            Duration::from_secs(config.rate_limits.time_frame),
+            config.rate_limits.max_requests,
+        );
+        let mut client = client.authorize(db)?;
+
+        loop {
+            if client.time_since_last_interaction() >= config.max_stall_time / 2 {
+                warn!("{}: Is stalling", client.id());
+            }
+
+            if client.time_since_last_interaction() >= config.max_stall_time {
+                error!("{}: Stalled for too long, kicking", client.id());
+                return Err(Error::StallTimeExceeded);
+            }
+
+            let request = match client.await_request() {
+                Ok(req) => req,
+                Err(Error::Io(err)) if err.kind() == io::ErrorKind::TimedOut => {
+                    continue;
+                }
+                Err(other) => return Err(other),
+            };
+
+            if rate_limiter.hit() {
+                error!("{}: Exceeded request limits", client.id());
+                break;
+            }
+
+            if request == Request::Bye {
+                debug!("{}: Bye", client.id());
+                client.shutdown()?;
+                break;
+            }
+
+            let response = handle_request(request, &mut client, db)?.ok_or(Error::BadRequest)?;
+
+            client.send_response(response)?;
+        }
+    */
+}
+
+fn handle_known_client(client: &mut Client, db: &mut DatabaseClient) -> Result<(), Error> {
+    let request = client.get_request()?;
+    let response = handle_request(request, client, db)?.ok_or(Error::BadRequest)?;
+
+    client.send_response(response)?;
+
+    todo!()
+}
+
+fn handle_unknown_client(client: &mut Client, db: &mut DatabaseClient) -> Result<(), Error> {
+    let mac = client.get_hello()?;
+    let id = db.authorize_device(&mac)?.ok_or(Error::Auth)?;
+
+    client.authorize(id, mac);
+    client.send_response(Response::Ok)?;
     Ok(())
 }
 
 fn handle_request(
     req: Request,
-    client: &mut Client<Authenticated>,
-    db: &DatabaseClient,
+    client: &mut Client,
+    db: &mut DatabaseClient,
 ) -> Result<Option<Response>, Error> {
     debug!(
         "Handling {req:#?} ({} bytes)",
@@ -85,20 +102,20 @@ fn handle_request(
             humidity,
             air_pressure,
         } => {
-            if client.last_submit().is_some() {
+            if client.last_submit()?.is_some() {
                 error!(
                     "{}: Submitted multiple posts, which is not allowed",
-                    client.id()
+                    client.debug_id()
                 );
                 return Ok(None);
             }
 
             debug!(
                 "{}: {temperature}C, {humidity}%, {air_pressure:?}hPa",
-                client.id()
+                client.id()?
             );
             client.set_last_submit(db.post_results(
-                client.id(),
+                client.id()?,
                 temperature,
                 humidity,
                 air_pressure,
@@ -110,8 +127,8 @@ fn handle_request(
             wifi_ssid,
             wifi_rssi,
         } => {
-            let Some(last_measurement_id) = client.last_submit() else {
-                error!("{}: Missing measurement", client.id());
+            let Some(last_measurement_id) = client.last_submit()? else {
+                error!("{}: Missing measurement", client.debug_id());
                 return Ok(None);
             };
 
@@ -119,21 +136,21 @@ fn handle_request(
             Ok(Some(Response::Ok))
         }
         Request::SendNotification(message) => {
-            db.create_notification(client.id(), &message)?;
+            db.create_notification(client.id()?, &message)?;
             Ok(Some(Response::Ok))
         }
         Request::GetSettings => {
-            let values = db.get_settings(client.id())?;
+            let values = db.get_settings(client.id()?)?;
 
             if values.is_none() {
-                warn!("{}: Settings are undefined", client.id());
+                warn!("{}: Settings are undefined", client.debug_id());
             }
 
             Ok(Some(Response::Settings(values)))
         }
         Request::UpdateCheck(current_ver) => {
-            debug!("{}: Claims OS version {}", client.id(), current_ver);
-            let update_info = db.check_os_update(client.id(), current_ver)?;
+            debug!("{}: Claims OS version {}", client.debug_id(), current_ver);
+            let update_info = db.check_os_update(client.id()?, current_ver)?;
 
             if let Some((version, firmware_blob)) = update_info {
                 client.store_update_check_result(current_ver, version, firmware_blob);
@@ -147,7 +164,7 @@ fn handle_request(
             let Some(reader) = client.update_chunk() else {
                 error!(
                     "{}: Requested update when there is none available",
-                    client.id()
+                    client.debug_id()
                 );
 
                 return Ok(None);
@@ -159,7 +176,7 @@ fn handle_request(
 
             if chunk.is_empty() {
                 db.send_os_update_stat(
-                    client.id(),
+                    client.id()?,
                     client
                         .current_version()
                         .expect("Client's current version was not set"),
@@ -173,7 +190,7 @@ fn handle_request(
             Ok(Some(Response::UpdatePart(buf.into_boxed_slice())))
         }
         Request::ReportFirmwareUpdate(success) => {
-            db.mark_os_update_stat(client.id(), success)?;
+            db.mark_os_update_stat(client.id()?, success)?;
             Ok(Some(Response::Ok))
         }
         Request::Bye => unreachable!(),
