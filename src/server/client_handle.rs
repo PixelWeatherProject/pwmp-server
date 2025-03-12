@@ -20,7 +20,7 @@ pub fn handle_client(
     db: &DatabaseClient,
     config: Arc<Config>,
 ) -> Result<(), Error> {
-    let client = Client::new(client)?;
+    let client = Client::new(client, config.max_stall_time)?;
     let mut rate_limiter = RateLimiter::new(
         Duration::from_secs(config.rate_limits.time_frame),
         config.rate_limits.max_requests,
@@ -28,19 +28,11 @@ pub fn handle_client(
     let mut client = client.authorize(db)?;
 
     loop {
-        if client.time_since_last_interaction() >= config.max_stall_time / 2 {
-            warn!("{}: Is stalling", client.id());
-        }
-
-        if client.time_since_last_interaction() >= config.max_stall_time {
-            error!("{}: Stalled for too long, kicking", client.id());
-            return Err(Error::StallTimeExceeded);
-        }
-
         let request = match client.await_request() {
             Ok(req) => req,
             Err(Error::Io(err)) if err.kind() == io::ErrorKind::TimedOut => {
-                continue;
+                error!("{}: Stalled for too long, kicking", client.id());
+                return Err(Error::StallTimeExceeded);
             }
             Err(other) => return Err(other),
         };

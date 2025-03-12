@@ -7,7 +7,7 @@ use pwmp_client::pwmp_msg::{
 use std::{
     io::{Cursor, Read, Write},
     net::{Shutdown, SocketAddr, TcpStream},
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 const RCV_BUFFER_SIZE: usize = 128;
@@ -18,7 +18,6 @@ pub struct Client<S> {
     socket: TcpStream,
     buf: [u8; RCV_BUFFER_SIZE],
     state: S,
-    last_interaction: Instant,
 }
 
 #[derive(Debug)]
@@ -44,10 +43,6 @@ pub struct Authenticated {
 }
 
 impl<S> Client<S> {
-    pub fn time_since_last_interaction(&self) -> Duration {
-        self.last_interaction.elapsed()
-    }
-
     pub fn await_request(&mut self) -> Result<Request> {
         self.await_next_message()?
             .as_request()
@@ -90,7 +85,6 @@ impl<S> Client<S> {
             return Err(Error::Quit);
         }
 
-        self.last_interaction = Instant::now();
         let message = Message::deserialize(&self.buf[..read]).ok_or(Error::MessageParse)?;
 
         Ok(message)
@@ -98,14 +92,13 @@ impl<S> Client<S> {
 }
 
 impl Client<Unathenticated> {
-    pub fn new(socket: TcpStream) -> Result<Self> {
-        socket.set_read_timeout(Some(Duration::from_secs(5)))?;
+    pub fn new(socket: TcpStream, read_timeout: Duration) -> Result<Self> {
+        socket.set_read_timeout(Some(read_timeout))?;
 
         Ok(Self {
             socket,
             buf: [0; RCV_BUFFER_SIZE],
             state: Unathenticated,
-            last_interaction: Instant::now(),
         })
     }
 
@@ -163,7 +156,6 @@ impl Client<Authenticated> {
                 last_submit: None,
                 update_state: UpdateState::Unchecked,
             },
-            last_interaction: Instant::now(),
         }
     }
 
