@@ -30,7 +30,7 @@ pub fn handle_client(
     loop {
         let request = match client.await_request() {
             Ok(req) => req,
-            Err(Error::Io(err)) if err.kind() == io::ErrorKind::TimedOut => {
+            Err(Error::Io(err)) if err.kind() == io::ErrorKind::WouldBlock => {
                 error!("{}: Stalled for too long, kicking", client.id());
                 return Err(Error::StallTimeExceeded);
             }
