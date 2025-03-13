@@ -9,6 +9,6 @@ CREATE TABLE
         to_version_major SMALLINT NOT NULL CHECK (to_version_major >= 0),
         to_version_middle SMALLINT NOT NULL CHECK (to_version_middle >= 0),
         to_version_minor SMALLINT NOT NULL CHECK (to_version_minor >= 0),
-        "when" TIMESTAMP UNIQUE NOT NULL DEFAULT NOW (),
+        "when" TIMESTAMP NOT NULL DEFAULT NOW (),
         success BOOLEAN DEFAULT NULL
     );
