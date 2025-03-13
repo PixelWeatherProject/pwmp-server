@@ -7,12 +7,12 @@ use pwmp_client::pwmp_msg::{
     version::Version,
 };
 use sqlx::{
-    postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
     Pool, Postgres,
+    postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
 };
 use tokio::runtime::Runtime;
 
-pub type NodeId = i16;
+pub type NodeId = i32;
 pub type MeasurementId = i32;
 pub type FirmwareBlob = Box<[u8]>;
 pub type UpdateStatId = i32;

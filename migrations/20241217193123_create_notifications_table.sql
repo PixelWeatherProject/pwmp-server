@@ -1,9 +1,9 @@
 -- Add migration script here
 CREATE TABLE
     notifications (
-        id SMALLSERIAL PRIMARY KEY,
-        node INT2 NOT NULL REFERENCES devices (id),
+        id SERIAL PRIMARY KEY,
+        node INT4 NOT NULL REFERENCES devices (id),
         "when" TIMESTAMP NOT NULL DEFAULT NOW (),
-        content VARCHAR(64) NOT NULL,
+        content VARCHAR(1024) NOT NULL,
         read BOOLEAN NOT NULL DEFAULT FALSE
     );
