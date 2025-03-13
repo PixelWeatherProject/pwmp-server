@@ -258,6 +258,13 @@ impl DatabaseClient {
                 "queries/drop_migrations_table.sql",
                 execute,
             )?;
+        } else if keep_devices {
+            query!(
+                self.rt,
+                self.pool,
+                "queries/erase_database_content_keep_devices.sql",
+                execute,
+            )?;
         } else {
             query!(self.rt, self.pool, "queries/erase_database.sql", execute,)?;
         }
