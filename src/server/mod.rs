@@ -1,7 +1,8 @@
 use crate::server::{db::DatabaseClient, handle::server_loop};
 use config::Config;
 use log::{error, info};
-use std::{net::TcpListener, process::exit, sync::Arc};
+use message_io::{network::Transport, node};
+use std::{process::exit, sync::Arc};
 
 mod client;
 mod client_handle;
@@ -20,12 +21,21 @@ pub fn main(config: Config) {
         }
     };
 
-    let Ok(server) = TcpListener::bind(config.server_bind_addr()) else {
-        eprintln!("Failed to bind to {}", config.server_bind_addr());
-        exit(1);
-    };
+    let (handler, listener) = node::split::<()>();
+
+    match handler
+        .network()
+        .listen(Transport::FramedTcp, config.server_bind_addr())
+    {
+        Ok((_id, real_addr)) => info!("Server running at {}", real_addr),
+        Err(why) => return error!("Failed to bind server socket: {why}"),
+    }
+
+    {
+        let handle_copy = handler.clone();
+        ctrlc::set_handler(move || handle_copy.stop()).unwrap();
+    }
 
     info!("Server started on {}", config.server_bind_addr());
-
-    server_loop(&server, db, Arc::new(config));
+    server_loop(handler, listener, db, Arc::new(config));
 }

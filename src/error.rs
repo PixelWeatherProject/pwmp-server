@@ -1,5 +1,7 @@
 use std::{io, num::TryFromIntError};
 
+use message_io::network::SendStatus;
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// Failed to parse a `Message`.
@@ -17,10 +19,6 @@ pub enum Error {
     /// Request was malformed or cannot be processed.
     #[error("Malformed or unprocessable request")]
     BadRequest,
-
-    /// Connection closed unexpectedly.
-    #[error("Connection closed unexpectedly")]
-    Quit,
 
     /// Database error.
     #[error("Database error: {0}")]
@@ -42,11 +40,24 @@ pub enum Error {
     #[error("I/O: {0}")]
     Io(#[from] io::Error),
 
+    /// Network error
+    #[error("Network error: {0:?}")]
+    Network(SendStatus),
+
     /// Authentication error.
     #[error("Node authentication failed")]
     Auth,
+}
 
-    /// Node stalled for too long.
-    #[error("Node stalled for too long")]
-    StallTimeExceeded,
+pub trait SendStatusEx {
+    fn errorize(self) -> Result<(), Error>;
+}
+
+impl SendStatusEx for SendStatus {
+    fn errorize(self) -> Result<(), Error> {
+        match self {
+            Self::Sent => Ok(()),
+            _ => Err(Error::Network(self)),
+        }
+    }
 }

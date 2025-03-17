@@ -1,62 +1,13 @@
 use super::{
     client::{Authenticated, Client},
-    config::Config,
     db::DatabaseClient,
-    rate_limit::RateLimiter,
 };
 use crate::error::Error;
 use log::{debug, error, warn};
 use pwmp_client::pwmp_msg::{Message, request::Request, response::Response};
-use std::{
-    io::{self, Read},
-    net::TcpStream,
-    sync::Arc,
-    time::Duration,
-};
+use std::io::Read;
 
-#[allow(clippy::needless_pass_by_value)]
-pub fn handle_client(
-    client: TcpStream,
-    db: &DatabaseClient,
-    config: Arc<Config>,
-) -> Result<(), Error> {
-    let client = Client::new(client, config.max_stall_time)?;
-    let mut rate_limiter = RateLimiter::new(
-        Duration::from_secs(config.rate_limits.time_frame),
-        config.rate_limits.max_requests,
-    );
-    let mut client = client.authorize(db)?;
-
-    loop {
-        let request = match client.await_request() {
-            Ok(req) => req,
-            Err(Error::Io(err)) if err.kind() == io::ErrorKind::WouldBlock => {
-                error!("{}: Stalled for too long, kicking", client.id());
-                return Err(Error::StallTimeExceeded);
-            }
-            Err(other) => return Err(other),
-        };
-
-        if rate_limiter.hit() {
-            error!("{}: Exceeded request limits", client.id());
-            break;
-        }
-
-        if request == Request::Bye {
-            debug!("{}: Bye", client.id());
-            client.shutdown()?;
-            break;
-        }
-
-        let response = handle_request(request, &mut client, db)?.ok_or(Error::BadRequest)?;
-
-        client.send_response(response)?;
-    }
-
-    Ok(())
-}
-
-fn handle_request(
+pub fn handle_request(
     req: Request,
     client: &mut Client<Authenticated>,
     db: &DatabaseClient,
@@ -69,7 +20,7 @@ fn handle_request(
     match req {
         Request::Ping => Ok(Some(Response::Pong)),
         Request::Hello { .. } => {
-            warn!("Received double `Hello` messages");
+            warn!("Received duplicate `Hello` messages");
             Ok(None)
         }
         Request::PostResults {

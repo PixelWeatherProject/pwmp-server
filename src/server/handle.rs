@@ -1,87 +1,124 @@
-use super::{config::Config, db::DatabaseClient, rate_limit::RateLimiter};
-use crate::server::client_handle::handle_client;
-use log::{debug, error, warn};
+use super::{
+    client::{Authenticated, Client, Unathenticated},
+    config::Config,
+    db::DatabaseClient,
+    rate_limit::RateLimiter,
+};
+use log::{debug, error, info, warn};
+use message_io::{
+    network::NetEvent,
+    node::{NodeHandler, NodeListener},
+};
 use std::{
-    net::TcpListener,
-    panic,
     sync::{
         Arc,
-        atomic::{AtomicU32, Ordering},
+        atomic::{AtomicUsize, Ordering},
     },
-    thread,
     time::Duration,
 };
 
-static CONNECTIONS: AtomicU32 = AtomicU32::new(0);
+static CONNECTIONS: AtomicUsize = AtomicUsize::new(0);
 
 #[allow(clippy::needless_pass_by_value)]
-pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>) {
+pub fn server_loop(
+    handler: NodeHandler<()>,
+    listener: NodeListener<()>,
+    db: DatabaseClient,
+    config: Arc<Config>,
+) {
     let shared_db = Arc::new(db);
     let mut rate_limiter = RateLimiter::new(
         Duration::from_secs(config.rate_limits.time_frame),
         config.rate_limits.max_connections,
     );
+    let mut unanthenticated_clients: Vec<Client<Unathenticated>> = Vec::new();
+    let mut authenticated_clients: Vec<Client<Authenticated>> = Vec::new();
 
-    for client in server.incoming() {
-        if CONNECTIONS.load(Ordering::Relaxed) == config.limits.max_devices {
-            warn!("Maximum number of connections reached, ignoring connection");
-            continue;
+    listener.for_each(move |event| match event.network() {
+        NetEvent::Connected(endpoint, false) => {
+            if CONNECTIONS.load(Ordering::SeqCst) == config.rate_limits.max_connections {
+                warn!("Maximum number of connections reached, ignoring connection");
+                handler.network().remove(endpoint.resource_id());
+            }
+
+            debug!(
+                "New endpoint connection '{}', incomplete/failed handshake",
+                endpoint.addr()
+            );
+            CONNECTIONS.fetch_add(1, Ordering::SeqCst);
         }
-
-        if rate_limiter.hit() {
-            warn!("Exceeded rate limit for accepting incoming connections");
-            continue;
+        NetEvent::Connected(endpoint, true) => debug!(
+            "New endpoint connection '{}', completed handshake handshake",
+            endpoint.addr()
+        ),
+        NetEvent::Accepted(endpoint, ..) => {
+            unanthenticated_clients.push(Client::new(endpoint, handler.clone()));
         }
-
-        let Ok(client) = client else {
-            warn!("A client failed to connect");
-            continue;
-        };
-        let Ok(peer_addr) = client.peer_addr() else {
-            error!("Failed to get a client's peer address information");
-            continue;
-        };
-
-        debug!("Incrementing connection count");
-        CONNECTIONS.fetch_add(1, Ordering::Relaxed);
-        if CONNECTIONS.load(Ordering::Relaxed) == config.limits.max_devices {
-            warn!("Reached maximum number of connections, new connections will be blocked");
+        NetEvent::Disconnected(endpoint) => {
+            unanthenticated_clients.retain(|candidate| candidate.endpoint() != &endpoint);
+            authenticated_clients.retain(|candidate| candidate.endpoint() != &endpoint);
         }
+        NetEvent::Message(endpoint, raw_msg) => {
+            if rate_limiter.hit() {
+                warn!("Request rate limit reached, ignoring message");
+                return;
+            }
 
-        {
-            let config = Arc::clone(&config);
-            let db = shared_db.clone();
-            debug!("Connection count: {}", CONNECTIONS.load(Ordering::SeqCst));
+            let unauthenticated_client = unanthenticated_clients
+                .iter()
+                .enumerate()
+                .find(|(_, client)| client.endpoint() == &endpoint)
+                .map(|(i, _)| i)
+                .and_then(|i| take(&mut unanthenticated_clients, i));
 
-            debug!("Starting client thread");
-            thread::spawn(move || {
-                debug!("New client: {}", peer_addr);
-                debug!("Setting panic hook for thread");
-                set_panic_hook();
+            if let Some(client) = unauthenticated_client {
+                let authenticated_client = match client.process(raw_msg, &shared_db) {
+                    Ok(client) => client,
+                    Err(why) => {
+                        error!(
+                            "{}: Failed authentication, kicking ({why})",
+                            endpoint.addr()
+                        );
+                        handler.network().remove(endpoint.resource_id());
+                        return;
+                    }
+                };
 
-                debug!("Starting client handle");
-                match handle_client(client, &db, config) {
+                authenticated_clients.push(authenticated_client);
+                return;
+            }
+
+            let authenticated_client = authenticated_clients
+                .iter()
+                .enumerate()
+                .find(|(_, client)| client.endpoint() == &endpoint)
+                .map(|(i, _)| i)
+                .and_then(|i| take(&mut authenticated_clients, i));
+
+            if let Some(mut client) = authenticated_client {
+                match client.process(raw_msg, &shared_db) {
                     Ok(()) => {
-                        debug!("{}: Handled successfully", peer_addr);
+                        debug!("{}: Handled successfully", client.id());
+                        authenticated_clients.push(client);
                     }
                     Err(why) => {
-                        error!("{peer_addr}: Failed to handle: {why}");
+                        error!("{}: Failed to handle: {why}", client.id());
+                        handler.network().remove(client.endpoint().resource_id());
                     }
                 }
+            }
 
-                debug!("Decrementing connection count");
-                CONNECTIONS.fetch_sub(1, Ordering::Relaxed);
-            });
+            error!("{}: Unknown endpoint", endpoint.addr());
         }
-    }
+    });
+
+    info!("Stop requested");
 }
 
-fn set_panic_hook() {
-    let default = panic::take_hook();
-
-    panic::set_hook(Box::new(move |panic_info| {
-        warn!("A client thread has paniced");
-        CONNECTIONS.fetch_sub(1, Ordering::Relaxed);
-        default(panic_info);
-    }));
+fn take<T>(vec: &mut Vec<T>, index: usize) -> Option<T> {
+    if vec.get(index).is_none() {
+        None
+    } else {
+        Some(vec.swap_remove(index))
+    }
 }
