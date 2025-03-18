@@ -11,7 +11,7 @@
     ],
     "parameters": {
       "Left": [
-        "Int2",
+        "Int4",
         "Numeric",
         "Int2",
         "Int2"

@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "TRUNCATE statistics,\nmeasurements,\nsettings,\nnotifications,\nfirmware_stats,\nfirmwares,\ndevices;",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "3f6363ea0fe2a8a02aaa1eea45c509a72d1e1163d502ac009c1d700721a6b57a"
+}

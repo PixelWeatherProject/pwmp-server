@@ -5,7 +5,7 @@
     "columns": [],
     "parameters": {
       "Left": [
-        "Int2",
+        "Int4",
         "Varchar"
       ]
     },
