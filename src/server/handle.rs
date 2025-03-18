@@ -1,8 +1,8 @@
 use super::{config::Config, db::DatabaseClient, rate_limit::RateLimiter};
 use crate::server::client_handle::handle_client;
 use log::{debug, error, warn};
+use socket2::Socket;
 use std::{
-    net::TcpListener,
     panic,
     sync::{
         Arc,
@@ -15,30 +15,38 @@ use std::{
 static CONNECTIONS: AtomicU32 = AtomicU32::new(0);
 
 #[allow(clippy::needless_pass_by_value)]
-pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>) {
+pub fn server_loop(server: &Socket, db: DatabaseClient, config: Arc<Config>) {
     let shared_db = Arc::new(db);
     let mut rate_limiter = RateLimiter::new(
         Duration::from_secs(config.rate_limits.time_frame),
         config.rate_limits.max_connections,
     );
 
-    for client in server.incoming() {
-        if CONNECTIONS.load(Ordering::Relaxed) == config.limits.max_devices {
-            warn!("Maximum number of connections reached, ignoring connection");
-            continue;
-        }
+    loop {
+        let (client, peer_addr) = match server.accept() {
+            Ok(res) => {
+                if CONNECTIONS.load(Ordering::Relaxed) == config.limits.max_devices {
+                    warn!("Maximum number of connections reached, ignoring connection");
+                    continue;
+                }
 
-        if rate_limiter.hit() {
-            warn!("Exceeded rate limit for accepting incoming connections");
-            continue;
-        }
+                if rate_limiter.hit() {
+                    warn!("Exceeded rate limit for accepting incoming connections");
+                    continue;
+                }
 
-        let Ok(client) = client else {
-            warn!("A client failed to connect");
-            continue;
+                res
+            }
+            Err(why) => {
+                error!("Failed to accept connection: {why}");
+                continue;
+            }
         };
-        let Ok(peer_addr) = client.peer_addr() else {
-            error!("Failed to get a client's peer address information");
+
+        debug!("New client: {:?}", peer_addr);
+        debug!("{:?}: Setting socket parameters", peer_addr);
+        if let Err(why) = super::set_global_socket_params(&client, &config) {
+            error!("{:?}: Failed to set socket parameters: {why}", peer_addr);
             continue;
         };
 
@@ -55,17 +63,16 @@ pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>
 
             debug!("Starting client thread");
             thread::spawn(move || {
-                debug!("New client: {}", peer_addr);
                 debug!("Setting panic hook for thread");
                 set_panic_hook();
 
                 debug!("Starting client handle");
                 match handle_client(client, &db, config) {
                     Ok(()) => {
-                        debug!("{}: Handled successfully", peer_addr);
+                        debug!("{:?}: Handled successfully", peer_addr);
                     }
                     Err(why) => {
-                        error!("{peer_addr}: Failed to handle: {why}");
+                        error!("{peer_addr:?}: Failed to handle: {why}");
                     }
                 }
 

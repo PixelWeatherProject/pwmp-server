@@ -7,20 +7,20 @@ use super::{
 use crate::error::Error;
 use log::{debug, error, warn};
 use pwmp_client::pwmp_msg::{request::Request, response::Response};
+use socket2::Socket;
 use std::{
     io::{self, Read},
-    net::TcpStream,
     sync::Arc,
     time::Duration,
 };
 
 #[allow(clippy::needless_pass_by_value)]
 pub fn handle_client(
-    client: TcpStream,
+    client: Socket,
     db: &DatabaseClient,
     config: Arc<Config>,
 ) -> Result<(), Error> {
-    let client = Client::new(client, config.max_stall_time)?;
+    let client = Client::new(client);
     let mut rate_limiter = RateLimiter::new(
         Duration::from_secs(config.rate_limits.time_frame),
         config.rate_limits.max_requests,

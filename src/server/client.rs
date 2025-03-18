@@ -5,10 +5,10 @@ use log::{debug, error, warn};
 use pwmp_client::pwmp_msg::{
     Message, MsgId, mac::Mac, request::Request, response::Response, version::Version,
 };
+use socket2::Socket;
 use std::{
     io::{Cursor, Read, Write},
-    net::{Shutdown, SocketAddr, TcpStream},
-    time::Duration,
+    net::{Shutdown, SocketAddrV4},
 };
 
 const RCV_BUFFER_SIZE: usize = 128;
@@ -18,7 +18,7 @@ type MsgLength = u32;
 
 #[derive(Debug)]
 pub struct Client<S> {
-    socket: TcpStream,
+    socket: Socket,
     buf: [u8; RCV_BUFFER_SIZE],
     id_cache: [MsgId; ID_CACHE_SIZE],
     state: S,
@@ -61,8 +61,11 @@ impl<S> Client<S> {
         Ok(())
     }
 
-    fn peer_addr(&self) -> Option<SocketAddr> {
-        self.socket.peer_addr().ok()
+    fn peer_addr(&self) -> Option<SocketAddrV4> {
+        self.socket
+            .peer_addr()
+            .ok()
+            .and_then(|a| a.as_socket_ipv4())
     }
 
     fn peer_addr_str(&self) -> String {
@@ -157,15 +160,13 @@ impl<S> Client<S> {
 }
 
 impl Client<Unathenticated> {
-    pub fn new(socket: TcpStream, read_timeout: Duration) -> Result<Self> {
-        socket.set_read_timeout(Some(read_timeout))?;
-
-        Ok(Self {
+    pub const fn new(socket: Socket) -> Self {
+        Self {
             socket,
             buf: [0; RCV_BUFFER_SIZE],
             id_cache: [0; ID_CACHE_SIZE],
             state: Unathenticated,
-        })
+        }
     }
 
     pub fn authorize(mut self, db: &DatabaseClient) -> Result<Client<Authenticated>> {
