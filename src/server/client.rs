@@ -1,8 +1,9 @@
 use super::db::{DatabaseClient, FirmwareBlob, MeasurementId, NodeId};
 use crate::error::Error;
+use arrayref::array_ref;
 use log::{debug, error, warn};
 use pwmp_client::pwmp_msg::{
-    Message, mac::Mac, request::Request, response::Response, version::Version,
+    Message, MsgId, mac::Mac, request::Request, response::Response, version::Version,
 };
 use std::{
     io::{Cursor, Read, Write},
@@ -11,12 +12,15 @@ use std::{
 };
 
 const RCV_BUFFER_SIZE: usize = 128;
+const ID_CACHE_SIZE: usize = 32;
 type Result<T> = ::std::result::Result<T, Error>;
+type MsgLength = u32;
 
 #[derive(Debug)]
 pub struct Client<S> {
     socket: TcpStream,
     buf: [u8; RCV_BUFFER_SIZE],
+    id_cache: [MsgId; ID_CACHE_SIZE],
     state: S,
 }
 
@@ -43,14 +47,16 @@ pub struct Authenticated {
 }
 
 impl<S> Client<S> {
-    pub fn await_request(&mut self) -> Result<Request> {
-        self.await_next_message()?
-            .as_request()
-            .ok_or(Error::NotRequest)
-    }
+    pub fn shutdown(&mut self, reason: Option<Response>) -> Result<()> {
+        debug!("{}: Attempting to shutdown socket", self.peer_addr_str());
 
-    pub fn shutdown(&self) -> Result<()> {
-        debug!("Attempting to shutdown socket");
+        if let Some(res) = reason {
+            debug!("{}: Sending reason code", self.peer_addr_str());
+            if let Err(why) = self.send_response(res) {
+                warn!("{}: Failed to send: {why}", self.peer_addr_str());
+            }
+        }
+
         self.socket.shutdown(Shutdown::Both)?;
         Ok(())
     }
@@ -59,35 +65,94 @@ impl<S> Client<S> {
         self.socket.peer_addr().ok()
     }
 
-    pub fn send_response(&mut self, resp: Response) -> Result<()> {
-        let message = Message::Response(resp);
-        debug!(
-            "{}: responding with {:?} ({} bytes)",
-            self.peer_addr_str(),
-            message.response().unwrap(),
-            message.size()
-        );
-        self.socket.write_all(&message.serialize())?;
-        self.socket.flush()?;
-        debug!("Response sent");
-
-        Ok(())
-    }
-
     fn peer_addr_str(&self) -> String {
         self.peer_addr()
             .map_or_else(|| "Unknown".to_string(), |addr| addr.to_string())
     }
 
-    fn await_next_message(&mut self) -> Result<Message> {
-        let read = self.socket.read(&mut self.buf)?;
-        if read == 0 {
-            return Err(Error::Quit);
+    pub fn send_response(&mut self, res: Response) -> Result<()> {
+        debug!("{}: responding with {res:?}", self.peer_addr_str(),);
+        self.send_message(Message::new_response(res, crate::csprng()))
+    }
+
+    pub fn receive_request(&mut self) -> Result<Request> {
+        // Receive the message.
+        let message = self.receive_message()?;
+
+        // Convert it to a request.
+        message.take_request().ok_or(Error::NotRequest)
+    }
+
+    fn send_message(&mut self, msg: Message) -> Result<()> {
+        // Serialize the message.
+        let raw = msg.serialize();
+
+        // Get the length and store it as a proper length integer.
+        let length: MsgLength = raw.len().try_into().map_err(|_| Error::MessageTooLarge)?;
+
+        // Send the length first as big/network endian.
+        self.socket.write_all(length.to_be_bytes().as_slice())?;
+
+        // Send the actual message next.
+        // TODO: Endianness should be handled internally, but this should be checked!
+        self.socket.write_all(&raw)?;
+
+        // Flush the buffer.
+        self.socket.flush()?;
+
+        // Done
+        Ok(())
+    }
+
+    fn receive_message(&mut self) -> Result<Message> {
+        // First read the message size.
+        self.socket
+            .read_exact(&mut self.buf[..size_of::<MsgLength>()])?;
+
+        // Parse the length
+        let message_length: usize =
+            u32::from_be_bytes(*array_ref![self.buf, 0, size_of::<u32>()]).try_into()?;
+
+        // Verify the length
+        if message_length == 0 {
+            return Err(Error::IllegalMessageLength);
+        }
+        // TODO: Add more restrictions as needed...
+
+        // Verify that the buffer is large enough.
+        if self.buf.len() < message_length {
+            return Err(Error::InvalidBuffer);
         }
 
-        let message = Message::deserialize(&self.buf[..read]).ok_or(Error::MessageParse)?;
+        // Read the actual message.
+        self.socket.read_exact(&mut self.buf[..message_length])?;
 
+        // Parse the message.
+        let message = Message::deserialize(&self.buf).ok_or(Error::MessageParse)?;
+
+        // Check if it's not a duplicate.
+        if self.is_id_cached(message.id()) {
+            return Err(Error::DuplicateMessage);
+        }
+
+        // Cache the ID.
+        self.cache_id(message.id());
+
+        // Done
         Ok(message)
+    }
+
+    fn is_id_cached(&self, id: MsgId) -> bool {
+        // Check if the ID matches any of the cached ones.
+        self.id_cache.iter().any(|candidate| candidate == &id)
+    }
+
+    fn cache_id(&mut self, id: MsgId) {
+        // Rotate the array left by one.
+        self.id_cache.rotate_left(1);
+
+        // Set the last ID to the specified one.
+        self.id_cache[self.id_cache.len() - 1] = id;
     }
 }
 
@@ -98,13 +163,14 @@ impl Client<Unathenticated> {
         Ok(Self {
             socket,
             buf: [0; RCV_BUFFER_SIZE],
+            id_cache: [0; ID_CACHE_SIZE],
             state: Unathenticated,
         })
     }
 
     pub fn authorize(mut self, db: &DatabaseClient) -> Result<Client<Authenticated>> {
         debug!("{}: Awaiting greeting", self.peer_addr_str());
-        let mac = self.handle_hello()?;
+        let mac = self.receive_handshake()?;
 
         debug!("{}: Is {}?", self.peer_addr_str(), mac);
 
@@ -135,10 +201,10 @@ impl Client<Unathenticated> {
         }
     }
 
-    fn handle_hello(&mut self) -> Result<Mac> {
-        let req = self.await_request()?;
-        let Request::Hello { mac } = req else {
-            return Err(Error::NotHello);
+    fn receive_handshake(&mut self) -> Result<Mac> {
+        let req = self.receive_request()?;
+        let Request::Handshake { mac } = req else {
+            return Err(Error::NotHandshake);
         };
 
         Ok(mac)
@@ -150,6 +216,7 @@ impl Client<Authenticated> {
         Self {
             socket: client.socket,
             buf: client.buf,
+            id_cache: [0; ID_CACHE_SIZE],
             state: Authenticated {
                 id,
                 mac,

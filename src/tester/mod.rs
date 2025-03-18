@@ -1,9 +1,9 @@
 use log::{debug, error, info};
 use pwmp_client::{
+    PwmpClient,
     ota::UpdateStatus,
     pwmp_msg::mac::Mac,
-    pwmp_msg::{dec, version::Version, Decimal},
-    PwmpClient,
+    pwmp_msg::{Decimal, dec, version::Version},
 };
 use std::{process::exit, str::FromStr};
 
@@ -18,7 +18,7 @@ pub fn test(host: String, port: Option<u16>, raw_mac: String) {
 
     let full_addr = format!("{}:{}", host, port.unwrap_or(55300));
 
-    let mut client = match PwmpClient::new(full_addr, mac, None, None, None) {
+    let mut client = match PwmpClient::new(full_addr, &crate::csprng, None, None, None) {
         Ok(client) => {
             info!("Client connected successfully!");
             client
@@ -28,6 +28,11 @@ pub fn test(host: String, port: Option<u16>, raw_mac: String) {
             exit(1);
         }
     };
+
+    info!("Performing handshake");
+    if let Err(why) = client.perform_handshake(mac) {
+        error!("Handshake failed: {why}");
+    }
 
     debug!("Pinging");
     if !client.ping() {

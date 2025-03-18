@@ -14,7 +14,7 @@ repository = "https://github.com/PixelWeatherProject/pwmp-server"
 strip = true
 
 [dependencies]
-pwmp-client = { git = "ssh://git@github.com/PixelWeatherProject/pwmp-client.git", tag = "v2.0.2" }
+pwmp-client = { git = "ssh://git@github.com/PixelWeatherProject/pwmp-client.git", branch = "extended-api" }
 sqlx = { version = "0.8.3", default-features = false, features = [
     "postgres",
     "runtime-tokio",
@@ -45,3 +45,6 @@ rust_decimal = { version = "1.36.0", features = ["db-diesel-postgres"] }
 users = { version = "0.11.0", default-features = false }
 serde_with = "3.12.0"
 color-print = "0.3.7"
+socket2 = { version = "0.5.8", default-features = false }
+ring = { version = "0.17.14", features = ["std"] }
+arrayref = "0.3.9"

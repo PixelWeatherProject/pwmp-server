@@ -1,10 +1,12 @@
 use clap::Parser;
 use cli::Command;
 use log::{debug, error, info};
+use pwmp_client::pwmp_msg::MsgId;
+use ring::rand::{SecureRandom, SystemRandom};
 use server::config::Config;
 use simple_logger::SimpleLogger;
 use sqlx::migrate::Migrator;
-use std::process::exit;
+use std::{process::exit, sync::LazyLock};
 use time::macros::format_description;
 
 mod cli;
@@ -15,6 +17,7 @@ mod svcmgr;
 mod tester;
 
 pub static MIGRATOR: Migrator = sqlx::migrate!();
+static CSPRNG: LazyLock<SystemRandom> = LazyLock::new(SystemRandom::new);
 
 fn main() -> Result<(), error::Error> {
     let args = cli::Cli::parse();
@@ -46,6 +49,9 @@ fn main() -> Result<(), error::Error> {
         }
     };
 
+    debug!("Initializing random number generator");
+    CSPRNG.fill(&mut []).expect("RNG init failed");
+
     match args.command {
         Some(Command::Service { command }) => svcmgr::main(command),
         Some(Command::Database { command }) => dbmgr::main(command, &config),
@@ -54,4 +60,12 @@ fn main() -> Result<(), error::Error> {
     }
 
     Ok(())
+}
+
+#[allow(clippy::missing_panics_doc)]
+pub fn csprng() -> MsgId {
+    let mut buffer = [0; size_of::<MsgId>()];
+    CSPRNG.fill(&mut buffer).expect("RNG failed");
+
+    MsgId::from_ne_bytes(buffer)
 }

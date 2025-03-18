@@ -10,17 +10,9 @@ pub enum Error {
     #[error("Expected message of variant `Request`, got `Response` instead")]
     NotRequest,
 
-    /// Expected the first message to be of type `Hello`.
-    #[error("Expected a `Hello` request")]
-    NotHello,
-
-    /// Request was malformed or cannot be processed.
-    #[error("Malformed or unprocessable request")]
-    BadRequest,
-
-    /// Connection closed unexpectedly.
-    #[error("Connection closed unexpectedly")]
-    Quit,
+    /// Expected the first message to be a handshake request.
+    #[error("Expected a handshake request")]
+    NotHandshake,
 
     /// Database error.
     #[error("Database error: {0}")]
@@ -49,4 +41,20 @@ pub enum Error {
     /// Node stalled for too long.
     #[error("Node stalled for too long")]
     StallTimeExceeded,
+
+    /// Invalid message length.
+    #[error("Message length is zero, too large, or generaly invalid")]
+    IllegalMessageLength,
+
+    /// The provided buffer was not large enough.
+    #[error("The provided buffer is too small")]
+    InvalidBuffer,
+
+    /// A message has been received twice.
+    #[error("Duplicate message")]
+    DuplicateMessage,
+
+    /// Invalid message length.
+    #[error("Message is too large to send")]
+    MessageTooLarge,
 }

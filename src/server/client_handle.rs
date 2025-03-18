@@ -6,7 +6,7 @@ use super::{
 };
 use crate::error::Error;
 use log::{debug, error, warn};
-use pwmp_client::pwmp_msg::{Message, request::Request, response::Response};
+use pwmp_client::pwmp_msg::{request::Request, response::Response};
 use std::{
     io::{self, Read},
     net::TcpStream,
@@ -28,7 +28,7 @@ pub fn handle_client(
     let mut client = client.authorize(db)?;
 
     loop {
-        let request = match client.await_request() {
+        let request = match client.receive_request() {
             Ok(req) => req,
             Err(Error::Io(err)) if err.kind() == io::ErrorKind::WouldBlock => {
                 error!("{}: Stalled for too long, kicking", client.id());
@@ -39,18 +39,37 @@ pub fn handle_client(
 
         if rate_limiter.hit() {
             error!("{}: Exceeded request limits", client.id());
+            client.shutdown(Some(Response::RateLimitExceeded))?;
             break;
         }
 
         if request == Request::Bye {
             debug!("{}: Bye", client.id());
-            client.shutdown()?;
+            client.shutdown(None)?;
             break;
         }
 
-        let response = handle_request(request, &mut client, db)?.ok_or(Error::BadRequest)?;
+        match handle_request(request, &mut client, db) {
+            Ok(response) => {
+                if matches!(
+                    response,
+                    Response::InvalidRequest
+                        | Response::RateLimitExceeded
+                        | Response::InternalServerError
+                ) {
+                    warn!(
+                        "{}: Error while processing request: {response:?}",
+                        client.id()
+                    );
+                }
 
-        client.send_response(response)?;
+                client.send_response(response)?;
+            }
+            Err(why) => {
+                client.shutdown(Some(Response::InternalServerError))?;
+                return Err(why);
+            }
+        }
     }
 
     Ok(())
@@ -60,17 +79,14 @@ fn handle_request(
     req: Request,
     client: &mut Client<Authenticated>,
     db: &DatabaseClient,
-) -> Result<Option<Response>, Error> {
-    debug!(
-        "Handling {req:#?} ({} bytes)",
-        Message::Request(req.clone()).size()
-    );
+) -> Result<Response, Error> {
+    debug!("Handling {req:#?}");
 
     match req {
-        Request::Ping => Ok(Some(Response::Pong)),
-        Request::Hello { .. } => {
-            warn!("Received double `Hello` messages");
-            Ok(None)
+        Request::Ping => Ok(Response::Pong),
+        Request::Handshake { .. } => {
+            warn!("Received another handshake message");
+            Ok(Response::InvalidRequest)
         }
         Request::PostResults {
             temperature,
@@ -82,7 +98,7 @@ fn handle_request(
                     "{}: Submitted multiple posts, which is not allowed",
                     client.id()
                 );
-                return Ok(None);
+                return Ok(Response::InvalidRequest);
             }
 
             debug!(
@@ -95,7 +111,7 @@ fn handle_request(
                 humidity,
                 air_pressure,
             )?);
-            Ok(Some(Response::Ok))
+            Ok(Response::Ok)
         }
         Request::PostStats {
             ref battery,
@@ -104,15 +120,15 @@ fn handle_request(
         } => {
             let Some(last_measurement_id) = client.last_submit() else {
                 error!("{}: Missing measurement", client.id());
-                return Ok(None);
+                return Ok(Response::InvalidRequest);
             };
 
             db.post_stats(last_measurement_id, battery, &wifi_ssid, wifi_rssi)?;
-            Ok(Some(Response::Ok))
+            Ok(Response::Ok)
         }
         Request::SendNotification(message) => {
             db.create_notification(client.id(), &message)?;
-            Ok(Some(Response::Ok))
+            Ok(Response::Ok)
         }
         Request::GetSettings => {
             let values = db.get_settings(client.id())?;
@@ -121,7 +137,7 @@ fn handle_request(
                 warn!("{}: Settings are undefined", client.id());
             }
 
-            Ok(Some(Response::Settings(values)))
+            Ok(Response::Settings(values))
         }
         Request::UpdateCheck(current_ver) => {
             debug!("{}: Claims OS version {}", client.id(), current_ver);
@@ -129,10 +145,10 @@ fn handle_request(
 
             if let Some((version, firmware_blob)) = update_info {
                 client.store_update_check_result(current_ver, version, firmware_blob);
-                Ok(Some(Response::UpdateAvailable(version)))
+                Ok(Response::UpdateAvailable(version))
             } else {
                 client.mark_up_to_date();
-                Ok(Some(Response::FirmwareUpToDate))
+                Ok(Response::FirmwareUpToDate)
             }
         }
         Request::NextUpdateChunk(chunk_size) => {
@@ -142,7 +158,7 @@ fn handle_request(
                     client.id()
                 );
 
-                return Ok(None);
+                return Ok(Response::InvalidRequest);
             };
 
             let mut buf = vec![0; chunk_size];
@@ -159,14 +175,14 @@ fn handle_request(
                         .update_version()
                         .expect("Client's update version was not set"),
                 )?;
-                return Ok(Some(Response::UpdateEnd));
+                return Ok(Response::UpdateEnd);
             }
 
-            Ok(Some(Response::UpdatePart(buf.into_boxed_slice())))
+            Ok(Response::UpdatePart(buf.into_boxed_slice()))
         }
         Request::ReportFirmwareUpdate(success) => {
             db.mark_os_update_stat(client.id(), success)?;
-            Ok(Some(Response::Ok))
+            Ok(Response::Ok)
         }
         Request::Bye => unreachable!(),
     }
