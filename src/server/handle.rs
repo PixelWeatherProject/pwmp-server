@@ -3,6 +3,7 @@ use crate::server::client_handle::handle_client;
 use log::{debug, error, warn};
 use socket2::Socket;
 use std::{
+    io::ErrorKind,
     panic,
     sync::{
         Arc,
@@ -37,13 +38,19 @@ pub fn server_loop(server: &Socket, db: DatabaseClient, config: Arc<Config>) {
 
                 res
             }
+            Err(why) if why.kind() == ErrorKind::WouldBlock => continue,
             Err(why) => {
                 error!("Failed to accept connection: {why}");
                 continue;
             }
         };
 
-        debug!("New client: {:?}", peer_addr);
+        let Some(peer_addr) = peer_addr.as_socket_ipv4() else {
+            error!("Invalid peer address");
+            continue;
+        };
+
+        debug!("New client: {peer_addr}");
         debug!("{:?}: Setting socket parameters", peer_addr);
         if let Err(why) = super::set_global_socket_params(&client, &config) {
             error!("{:?}: Failed to set socket parameters: {why}", peer_addr);
@@ -69,10 +76,10 @@ pub fn server_loop(server: &Socket, db: DatabaseClient, config: Arc<Config>) {
                 debug!("Starting client handle");
                 match handle_client(client, &db, config) {
                     Ok(()) => {
-                        debug!("{:?}: Handled successfully", peer_addr);
+                        debug!("{peer_addr}: Handled successfully");
                     }
                     Err(why) => {
-                        error!("{peer_addr:?}: Failed to handle: {why}");
+                        error!("{peer_addr}: Failed to handle: {why}");
                     }
                 }
 

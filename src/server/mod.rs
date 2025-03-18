@@ -41,6 +41,11 @@ pub fn main(config: Config) {
         exit(1);
     }
 
+    if let Err(why) = server.listen(128) {
+        error!("Failed to start listening: {why}");
+        exit(1);
+    }
+
     info!("Server started on {}", config.server_bind_addr());
     server_loop(&server, db, config);
 }
