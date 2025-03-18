@@ -15,11 +15,11 @@ const ID_CACHE_SIZE: usize = 32;
 type Result<T> = ::std::result::Result<T, Error>;
 type MsgLength = u32;
 
-#[derive(Debug)]
 pub struct Client<S> {
     socket: TcpStream,
     buf: [u8; RCV_BUFFER_SIZE],
     id_cache: [MsgId; ID_CACHE_SIZE],
+    last_id: MsgId,
     state: S,
 }
 
@@ -71,7 +71,8 @@ impl<S> Client<S> {
 
     pub fn send_response(&mut self, res: Response) -> Result<()> {
         debug!("{}: responding with {res:?}", self.peer_addr_str(),);
-        self.send_message(Message::new_response(res, crate::csprng()))
+        self.last_id += 1;
+        self.send_message(Message::new_response(res, self.last_id))
     }
 
     pub fn receive_request(&mut self) -> Result<Request> {
@@ -161,6 +162,7 @@ impl Client<Unathenticated> {
             socket,
             buf: [0; RCV_BUFFER_SIZE],
             id_cache: [0; ID_CACHE_SIZE],
+            last_id: 1,
             state: Unathenticated,
         }
     }
@@ -214,6 +216,7 @@ impl Client<Authenticated> {
             socket: client.socket,
             buf: client.buf,
             id_cache: [0; ID_CACHE_SIZE],
+            last_id: client.last_id,
             state: Authenticated {
                 id,
                 mac,

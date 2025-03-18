@@ -2,10 +2,15 @@ use log::{debug, error, info};
 use pwmp_client::{
     PwmpClient,
     ota::UpdateStatus,
-    pwmp_msg::mac::Mac,
-    pwmp_msg::{Decimal, dec, version::Version},
+    pwmp_msg::{Decimal, MsgId, dec, mac::Mac, version::Version},
 };
-use std::{process::exit, str::FromStr};
+use std::{
+    process::exit,
+    str::FromStr,
+    sync::atomic::{AtomicU32, Ordering},
+};
+
+static COUNTER: AtomicU32 = AtomicU32::new(1);
 
 /// Try to connect to a server and authenticate with the given MAC address to
 /// check if the server is working properly.
@@ -18,7 +23,7 @@ pub fn test(host: String, port: Option<u16>, raw_mac: String) {
 
     let full_addr = format!("{}:{}", host, port.unwrap_or(55300));
 
-    let mut client = match PwmpClient::new(full_addr, &crate::csprng, None, None, None) {
+    let mut client = match PwmpClient::new(full_addr, &id_generator, None, None, None) {
         Ok(client) => {
             info!("Client connected successfully!");
             client
@@ -86,4 +91,8 @@ pub fn test(host: String, port: Option<u16>, raw_mac: String) {
     }
 
     info!("Test passed!");
+}
+
+fn id_generator() -> MsgId {
+    COUNTER.fetch_add(1, Ordering::SeqCst)
 }
