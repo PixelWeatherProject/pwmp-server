@@ -13,6 +13,7 @@ pub mod config;
 pub mod db;
 pub mod handle;
 pub mod rate_limit;
+pub mod rngbuf;
 
 pub fn main(config: Config) {
     let config = Arc::new(config);
