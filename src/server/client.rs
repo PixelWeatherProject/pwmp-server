@@ -5,10 +5,9 @@ use log::{debug, error, warn};
 use pwmp_client::pwmp_msg::{
     Message, MsgId, mac::Mac, request::Request, response::Response, version::Version,
 };
-use socket2::Socket;
 use std::{
     io::{Cursor, Read, Write},
-    net::{Shutdown, SocketAddrV4},
+    net::{Shutdown, SocketAddr, TcpStream},
 };
 
 const RCV_BUFFER_SIZE: usize = 128;
@@ -18,7 +17,7 @@ type MsgLength = u32;
 
 #[derive(Debug)]
 pub struct Client<S> {
-    socket: Socket,
+    socket: TcpStream,
     buf: [u8; RCV_BUFFER_SIZE],
     id_cache: [MsgId; ID_CACHE_SIZE],
     state: S,
@@ -61,11 +60,8 @@ impl<S> Client<S> {
         Ok(())
     }
 
-    fn peer_addr(&self) -> Option<SocketAddrV4> {
-        self.socket
-            .peer_addr()
-            .ok()
-            .and_then(|a| a.as_socket_ipv4())
+    fn peer_addr(&self) -> Option<SocketAddr> {
+        self.socket.peer_addr().ok()
     }
 
     fn peer_addr_str(&self) -> String {
@@ -160,7 +156,7 @@ impl<S> Client<S> {
 }
 
 impl Client<Unathenticated> {
-    pub const fn new(socket: Socket) -> Self {
+    pub const fn new(socket: TcpStream) -> Self {
         Self {
             socket,
             buf: [0; RCV_BUFFER_SIZE],

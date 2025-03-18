@@ -1,9 +1,9 @@
 use super::{config::Config, db::DatabaseClient, rate_limit::RateLimiter};
 use crate::server::client_handle::handle_client;
 use log::{debug, error, warn};
-use socket2::Socket;
 use std::{
     io::ErrorKind,
+    net::TcpListener,
     panic,
     sync::{
         Arc,
@@ -16,7 +16,7 @@ use std::{
 static CONNECTIONS: AtomicU32 = AtomicU32::new(0);
 
 #[allow(clippy::needless_pass_by_value)]
-pub fn server_loop(server: &Socket, db: DatabaseClient, config: Arc<Config>) {
+pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>) {
     let shared_db = Arc::new(db);
     let mut rate_limiter = RateLimiter::new(
         Duration::from_secs(config.rate_limits.time_frame),
@@ -43,11 +43,6 @@ pub fn server_loop(server: &Socket, db: DatabaseClient, config: Arc<Config>) {
                 error!("Failed to accept connection: {why}");
                 continue;
             }
-        };
-
-        let Some(peer_addr) = peer_addr.as_socket_ipv4() else {
-            error!("Invalid peer address");
-            continue;
         };
 
         debug!("New client: {peer_addr}");

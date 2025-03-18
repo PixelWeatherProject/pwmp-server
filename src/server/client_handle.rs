@@ -7,16 +7,16 @@ use super::{
 use crate::error::Error;
 use log::{debug, error, warn};
 use pwmp_client::pwmp_msg::{request::Request, response::Response};
-use socket2::Socket;
 use std::{
     io::{self, Read},
+    net::TcpStream,
     sync::Arc,
     time::Duration,
 };
 
 #[allow(clippy::needless_pass_by_value)]
 pub fn handle_client(
-    client: Socket,
+    client: TcpStream,
     db: &DatabaseClient,
     config: Arc<Config>,
 ) -> Result<(), Error> {
