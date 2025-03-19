@@ -53,9 +53,7 @@ pub fn handle_client(
             Ok(response) => {
                 if matches!(
                     response,
-                    Response::InvalidRequest
-                        | Response::RateLimitExceeded
-                        | Response::InternalServerError
+                    Response::InvalidRequest /* add more as needed */
                 ) {
                     warn!(
                         "{}: Error while processing request: {response:?}",
