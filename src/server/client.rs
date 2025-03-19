@@ -6,7 +6,7 @@ use pwmp_client::pwmp_msg::{
     Message, MsgId, mac::Mac, request::Request, response::Response, version::Version,
 };
 use std::{
-    io::{BufReader, BufWriter, Cursor, Read, Write},
+    io::{Cursor, Read, Write},
     net::{Shutdown, SocketAddr, TcpStream},
 };
 
@@ -16,8 +16,7 @@ type Result<T> = ::std::result::Result<T, Error>;
 type MsgLength = u32;
 
 pub struct Client<S> {
-    reader: BufReader<TcpStream>,
-    writer: BufWriter<TcpStream>,
+    stream: TcpStream,
     buf: [u8; RCV_BUFFER_SIZE],
     id_cache: [MsgId; ID_CACHE_SIZE],
     last_id: MsgId,
@@ -57,13 +56,12 @@ impl<S> Client<S> {
             }
         }
 
-        self.reader.get_ref().shutdown(Shutdown::Both)?;
-        self.writer.get_ref().shutdown(Shutdown::Both)?;
+        self.stream.shutdown(Shutdown::Both)?;
         Ok(())
     }
 
     fn peer_addr(&self) -> Option<SocketAddr> {
-        self.reader.get_ref().peer_addr().ok()
+        self.stream.peer_addr().ok()
     }
 
     fn peer_addr_str(&self) -> String {
@@ -93,14 +91,14 @@ impl<S> Client<S> {
         let length: MsgLength = raw.len().try_into().map_err(|_| Error::MessageTooLarge)?;
 
         // Send the length first as big/network endian.
-        self.writer.write_all(length.to_be_bytes().as_slice())?;
+        self.stream.write_all(length.to_be_bytes().as_slice())?;
 
         // Send the actual message next.
         // TODO: Endianness should be handled internally, but this should be checked!
-        self.writer.write_all(&raw)?;
+        self.stream.write_all(&raw)?;
 
         // Flush the buffer.
-        self.writer.flush()?;
+        self.stream.flush()?;
 
         // Done
         Ok(())
@@ -108,7 +106,7 @@ impl<S> Client<S> {
 
     fn receive_message(&mut self) -> Result<Message> {
         // First read the message size.
-        self.reader
+        self.stream
             .read_exact(&mut self.buf[..size_of::<MsgLength>()])?;
 
         // Parse the length
@@ -127,7 +125,7 @@ impl<S> Client<S> {
         }
 
         // Read the actual message.
-        self.reader.read_exact(&mut self.buf[..message_length])?;
+        self.stream.read_exact(&mut self.buf[..message_length])?;
 
         // Parse the message.
         let message = Message::deserialize(&self.buf).ok_or(Error::MessageParse)?;
@@ -161,8 +159,7 @@ impl<S> Client<S> {
 impl Client<Unathenticated> {
     pub fn new(socket: TcpStream) -> Self {
         Self {
-            reader: BufReader::new(socket.try_clone().unwrap()),
-            writer: BufWriter::new(socket),
+            stream: socket,
             buf: [0; RCV_BUFFER_SIZE],
             id_cache: [0; ID_CACHE_SIZE],
             last_id: 1,
@@ -216,8 +213,7 @@ impl Client<Unathenticated> {
 impl Client<Authenticated> {
     fn new(client: Client<Unathenticated>, id: NodeId, mac: Mac) -> Self {
         Self {
-            reader: client.reader,
-            writer: client.writer,
+            stream: client.stream,
             buf: client.buf,
             id_cache: [0; ID_CACHE_SIZE],
             last_id: client.last_id,
