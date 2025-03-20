@@ -77,7 +77,8 @@ pub fn set_global_socket_params<FD: AsRawFd>(socket: &FD, config: &Arc<Config>) 
     Ok(())
 }
 
-fn setsockopt<T, FD: AsRawFd>(fd: &FD, level: c_int, opt: c_int, value: &T) -> io::Result<()> {
+#[allow(clippy::needless_pass_by_value)]
+fn setsockopt<T, FD: AsRawFd>(fd: &FD, level: c_int, opt: c_int, value: T) -> io::Result<()> {
     let (ptr, len) = ((&raw const value).cast(), mem::size_of::<T>());
     let option_len = socklen_t::try_from(len)
         .map_err(|_| io::Error::other("failed to convert usize to socklen_t"))?;
