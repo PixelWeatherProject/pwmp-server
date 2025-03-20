@@ -29,6 +29,9 @@ limits:
   # This limit cannot be disabled.
   max_settings: 10
 
+  # Maximum amount of time a client can stay connected without sending any requests. If the client stays connected for longer than this time, without communicating, it will be kicked.
+  max_stall_time: 10
+
 # Configuration for the built-in rate limiter.
 rate_limiter:
   time_frame: 1 # second(s)
@@ -36,9 +39,6 @@ rate_limiter:
   max_requests: 4
   # Maximum amount of simultaneous connections.
   max_connections: 4
-
-# Maximum amount of time a client can stay connected without sending any requests. If the client stays connected for longer than this time, without communicating, it will be kicked.
-max_stall_time: 10
 ```
 
 # Database server
