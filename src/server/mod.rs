@@ -48,7 +48,7 @@ pub fn set_global_socket_params<FD: AsRawFd>(socket: &FD, config: &Arc<Config>) 
         socket,
         SOL_SOCKET,
         SO_SNDTIMEO, /* write timeout */
-        timeval {
+        &timeval {
             tv_sec: config.max_stall_time.as_secs().try_into().unwrap(),
             tv_usec: 0,
         },
@@ -57,7 +57,7 @@ pub fn set_global_socket_params<FD: AsRawFd>(socket: &FD, config: &Arc<Config>) 
         socket,
         SOL_SOCKET,
         SO_RCVTIMEO, /* read timeout */
-        timeval {
+        &timeval {
             tv_sec: config.max_stall_time.as_secs().try_into().unwrap(),
             tv_usec: 0,
         },
@@ -66,20 +66,22 @@ pub fn set_global_socket_params<FD: AsRawFd>(socket: &FD, config: &Arc<Config>) 
         socket,
         SOL_SOCKET,
         SO_LINGER,
-        Some(linger {
+        &linger {
             l_linger: 5,
             l_onoff: 1,
-        }),
+        },
     )?;
-    setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, 1)?;
-    setsockopt(socket, SOL_SOCKET, SO_KEEPALIVE, 1i32)?;
+    setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &1)?;
+    setsockopt(socket, SOL_SOCKET, SO_KEEPALIVE, &1i32)?;
 
     Ok(())
 }
 
-fn setsockopt<T, FD: AsRawFd>(fd: &FD, level: c_int, opt: c_int, value: T) -> io::Result<()> {
-    let (ptr, len) = (&value as *const T as *const _, mem::size_of::<T>());
-    let err = unsafe { libc::setsockopt(fd.as_raw_fd(), level, opt, ptr, len as socklen_t) };
+fn setsockopt<T, FD: AsRawFd>(fd: &FD, level: c_int, opt: c_int, value: &T) -> io::Result<()> {
+    let (ptr, len) = ((&raw const value).cast(), mem::size_of::<T>());
+    let option_len = socklen_t::try_from(len)
+        .map_err(|_| io::Error::other("failed to convert usize to socklen_t"))?;
+    let err = unsafe { libc::setsockopt(fd.as_raw_fd(), level, opt, ptr, option_len) };
 
     if err == 0 {
         return Ok(());

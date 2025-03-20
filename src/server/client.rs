@@ -157,7 +157,7 @@ impl<S> Client<S> {
 }
 
 impl Client<Unathenticated> {
-    pub fn new(socket: TcpStream) -> Self {
+    pub const fn new(socket: TcpStream) -> Self {
         Self {
             stream: socket,
             buf: [0; RCV_BUFFER_SIZE],
