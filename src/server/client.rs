@@ -121,6 +121,11 @@ impl<S> Client<S> {
 
         // Verify that the buffer is large enough.
         if self.buf.len() < message_length {
+            error!(
+                "{}: Received message length is {message_length} bytes, but the buffer is only {} bytes",
+                self.peer_addr_str(),
+                self.buf.len()
+            );
             return Err(Error::InvalidBuffer);
         }
 
