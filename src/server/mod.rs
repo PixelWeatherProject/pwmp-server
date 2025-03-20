@@ -77,7 +77,7 @@ pub fn set_global_socket_params<FD: AsRawFd>(socket: &FD, config: &Arc<Config>) 
     Ok(())
 }
 
-#[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value)] // Passing a reference to T causes this to break. Possibly because `ptr` becomes a double pointer?
 fn setsockopt<T, FD: AsRawFd>(fd: &FD, level: c_int, opt: c_int, value: T) -> io::Result<()> {
     let (ptr, len) = ((&raw const value).cast(), mem::size_of::<T>());
     let option_len = socklen_t::try_from(len)
