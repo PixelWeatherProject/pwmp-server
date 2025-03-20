@@ -49,7 +49,7 @@ pub fn set_global_socket_params<FD: AsRawFd>(socket: &FD, config: &Arc<Config>) 
         SOL_SOCKET,
         SO_SNDTIMEO, /* write timeout */
         timeval {
-            tv_sec: config.limits.max_stall_time.as_secs().try_into().unwrap(),
+            tv_sec: config.limits.stall_time.as_secs().try_into().unwrap(),
             tv_usec: 0,
         },
     )?;
@@ -58,7 +58,7 @@ pub fn set_global_socket_params<FD: AsRawFd>(socket: &FD, config: &Arc<Config>) 
         SOL_SOCKET,
         SO_RCVTIMEO, /* read timeout */
         timeval {
-            tv_sec: config.limits.max_stall_time.as_secs().try_into().unwrap(),
+            tv_sec: config.limits.stall_time.as_secs().try_into().unwrap(),
             tv_usec: 0,
         },
     )?;

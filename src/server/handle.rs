@@ -26,7 +26,7 @@ pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>
     loop {
         let (client, peer_addr) = match server.accept() {
             Ok(res) => {
-                if CONNECTIONS.load(Ordering::Relaxed) == config.limits.max_devices {
+                if CONNECTIONS.load(Ordering::Relaxed) == config.limits.devices {
                     warn!("Maximum number of connections reached, ignoring connection");
                     continue;
                 }
@@ -54,7 +54,7 @@ pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>
 
         debug!("Incrementing connection count");
         CONNECTIONS.fetch_add(1, Ordering::Relaxed);
-        if CONNECTIONS.load(Ordering::Relaxed) == config.limits.max_devices {
+        if CONNECTIONS.load(Ordering::Relaxed) == config.limits.devices {
             warn!("Reached maximum number of connections, new connections will be blocked");
         }
 

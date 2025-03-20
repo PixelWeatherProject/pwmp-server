@@ -23,14 +23,14 @@ database:
 limits:
   # Maximum number of devices that can be connected at the same time.
   # This limit cannot be disabled.
-  max_devices: 10
+  devices: 10
 
   # Sets how many settings can be requested using the `Message::GetSettings`  message.
   # This limit cannot be disabled.
-  max_settings: 10
+  settings: 10
 
   # Maximum amount of time a client can stay connected without sending any requests. If the client stays connected for longer than this time, without communicating, it will be kicked.
-  max_stall_time: 10
+  stall_time: 10
 
 # Configuration for the built-in rate limiter.
 rate_limiter:

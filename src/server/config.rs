@@ -37,10 +37,10 @@ pub struct DatabaseConfig {
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LimitsConfig {
-    pub max_devices: u32,
-    pub max_settings: u32,
+    pub devices: u32,
+    pub settings: u32,
     #[serde_as(as = "DurationSeconds")]
-    pub max_stall_time: Duration,
+    pub stall_time: Duration,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -85,9 +85,9 @@ impl Default for DatabaseConfig {
 impl Default for LimitsConfig {
     fn default() -> Self {
         Self {
-            max_devices: 10,
-            max_settings: 10,
-            max_stall_time: Duration::from_secs(10),
+            devices: 10,
+            settings: 10,
+            stall_time: Duration::from_secs(10),
         }
     }
 }
