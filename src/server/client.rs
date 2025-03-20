@@ -57,6 +57,7 @@ impl<S> Client<S> {
         }
 
         self.stream.shutdown(Shutdown::Both)?;
+        debug!("{}: Stream shut down", self.peer_addr_str());
         Ok(())
     }
 

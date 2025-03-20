@@ -14,7 +14,7 @@ repository = "https://github.com/PixelWeatherProject/pwmp-server"
 strip = true
 
 [dependencies]
-pwmp-client = { git = "ssh://git@github.com/PixelWeatherProject/pwmp-client.git", tag = "v2.1.0" }
+pwmp-client = { git = "ssh://git@github.com/PixelWeatherProject/pwmp-client.git", tag = "v2.1.1" }
 sqlx = { version = "0.8.3", default-features = false, features = [
     "postgres",
     "runtime-tokio",

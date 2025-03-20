@@ -32,6 +32,7 @@ pub fn handle_client(
             Ok(req) => req,
             Err(Error::Io(err)) if err.kind() == io::ErrorKind::WouldBlock => {
                 error!("{}: Stalled for too long, kicking", client.id());
+                let _ = client.shutdown(Some(Response::Stalling));
                 return Err(Error::StallTimeExceeded);
             }
             Err(other) => return Err(other),
