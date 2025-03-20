@@ -10,7 +10,7 @@ use std::{
     net::{Shutdown, SocketAddr, TcpStream},
 };
 
-const RCV_BUFFER_SIZE: usize = 128;
+const RCV_BUFFER_SIZE: usize = 1024;
 const ID_CACHE_SIZE: usize = 32;
 type Result<T> = ::std::result::Result<T, Error>;
 type MsgLength = u32;
