@@ -12,20 +12,41 @@ port: 55300
 
 # Database connection settings.
 # PostgreSQL is the only supported database.
-db_host: "123.456.789.012"
-db_port: 5432
-db_user: "root"
-db_password: "root"
-db_name: "pixelweather"
+database:
+  host: "123.456.789.012"
+  port: 5432
+  user: "root"
+  password: "root"
+  name: "pixelweather"
+  ssl: false
 
-# Maximum number of devices that can be connected at the same time.
-# This limit cannot be disabled.
-max_devices: 10
+limits:
+  # Maximum number of devices that can be connected at the same time.
+  # This limit cannot be disabled.
+  max_devices: 10
 
-# Sets how many settings can be requested using the `Message::GetSettings` message.
-# This limit cannot be disabled.
-max_settings: 10
+  # Sets how many settings can be requested using the `Message::GetSettings`  message.
+  # This limit cannot be disabled.
+  max_settings: 10
+
+# Configuration for the built-in rate limiter.
+rate_limiter:
+  time_frame: 1 # second(s)
+  # Maximum amount of requests a client can make within the specified time frame above.
+  max_requests: 4
+  # Maximum amount of simultaneous connections.
+  max_connections: 4
+
+# Maximum amount of time a client can stay connected without sending any requests. If the client stays connected for longer than this time, without communicating, it will be kicked.
+max_stall_time: 10
 ```
+
+# Database server
+Only PostgreSQL is supported. It's recommended to use the latest version.
+
+Compatibility has been verified with the following versions:
+- 16.x
+- 17.4
 
 # Using as a service
 The CLI has a `service` subcommand, which allows managing a background service.
