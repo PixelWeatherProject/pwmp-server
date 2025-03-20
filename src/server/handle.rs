@@ -86,11 +86,8 @@ pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>
 }
 
 fn set_panic_hook() {
-    let default = panic::take_hook();
-
-    panic::set_hook(Box::new(move |panic_info| {
+    panic::set_hook(Box::new(move |_| {
         warn!("A client thread has paniced");
         CONNECTIONS.fetch_sub(1, Ordering::Relaxed);
-        default(panic_info);
     }));
 }
