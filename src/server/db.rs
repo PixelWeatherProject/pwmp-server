@@ -240,7 +240,7 @@ impl DatabaseClient {
                 query!(
                     self.rt,
                     self.pool,
-                    "queries/erase_database_content_keep_devices.sql",
+                    "queries/erase_database_content_keep_devices_and_settings.sql",
                     execute,
                 )?;
             } else {
@@ -262,7 +262,7 @@ impl DatabaseClient {
             query!(
                 self.rt,
                 self.pool,
-                "queries/erase_database_content_keep_devices.sql",
+                "queries/erase_database_content_keep_devices_and_settings.sql",
                 execute,
             )?;
         } else {

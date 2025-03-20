@@ -1,4 +1,4 @@
-use clap::{command, Parser, Subcommand};
+use clap::{Parser, Subcommand, command};
 use std::path::PathBuf;
 
 #[derive(Debug, Parser)]
@@ -82,7 +82,7 @@ pub enum DatabaseCommand {
         #[arg(long)]
         content_only: bool,
 
-        /// Keep configured devices
+        /// Keep configured devices and their settings
         #[arg(long)]
         keep_devices: bool,
     },
