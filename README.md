@@ -37,7 +37,7 @@ rate_limiter:
   time_frame: 1 # second(s)
   # Maximum amount of requests a client can make within the specified time frame above.
   max_requests: 4
-  # Maximum amount of simultaneous connections.
+  # Maximum amount of connections that may be accepted within the specified time frame above.
   max_connections: 4
 ```
 
