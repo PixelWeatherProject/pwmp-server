@@ -2,4 +2,4 @@ TRUNCATE statistics,
 measurements,
 notifications,
 firmware_stats,
-firmwares;
+firmwares RESTART IDENTITY CASCADE;
