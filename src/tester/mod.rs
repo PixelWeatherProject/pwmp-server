@@ -8,6 +8,7 @@ use std::{
     process::exit,
     str::FromStr,
     sync::atomic::{AtomicU32, Ordering},
+    time::Instant,
 };
 
 static COUNTER: AtomicU32 = AtomicU32::new(1);
@@ -22,6 +23,7 @@ pub fn test(host: String, port: Option<u16>, raw_mac: String) {
     };
 
     let full_addr = format!("{}:{}", host, port.unwrap_or(55300));
+    let start = Instant::now();
 
     let mut client = match PwmpClient::new(full_addr, &id_generator, None, None, None) {
         Ok(client) => {
@@ -90,7 +92,8 @@ pub fn test(host: String, port: Option<u16>, raw_mac: String) {
         exit(1);
     }
 
-    info!("Test passed!");
+    let elapsed = start.elapsed();
+    info!("Test passed in {elapsed:?}!");
 }
 
 fn id_generator() -> MsgId {
