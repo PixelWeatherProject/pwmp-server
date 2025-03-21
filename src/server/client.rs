@@ -1,6 +1,7 @@
 use super::db::{DatabaseClient, FirmwareBlob, MeasurementId, NodeId};
 use crate::error::Error;
 use arrayref::array_ref;
+use circular_queue::CircularQueue;
 use log::{debug, error, warn};
 use pwmp_client::pwmp_msg::{
     Message, MsgId, mac::Mac, request::Request, response::Response, version::Version,
@@ -18,7 +19,7 @@ type MsgLength = u32;
 pub struct Client<S> {
     stream: TcpStream,
     buf: [u8; RCV_BUFFER_SIZE],
-    id_cache: [MsgId; ID_CACHE_SIZE],
+    id_cache: CircularQueue<MsgId>,
     last_id: MsgId,
     state: S,
 }
@@ -142,7 +143,7 @@ impl<S> Client<S> {
         }
 
         // Cache the ID.
-        self.cache_id(message.id());
+        self.id_cache.push(message.id());
 
         // Done
         Ok(message)
@@ -152,22 +153,14 @@ impl<S> Client<S> {
         // Check if the ID matches any of the cached ones.
         self.id_cache.iter().any(|candidate| candidate == &id)
     }
-
-    fn cache_id(&mut self, id: MsgId) {
-        // Rotate the array left by one.
-        self.id_cache.rotate_left(1);
-
-        // Set the last ID to the specified one.
-        self.id_cache[self.id_cache.len() - 1] = id;
-    }
 }
 
 impl Client<Unathenticated> {
-    pub const fn new(socket: TcpStream) -> Self {
+    pub fn new(socket: TcpStream) -> Self {
         Self {
             stream: socket,
             buf: [0; RCV_BUFFER_SIZE],
-            id_cache: [0; ID_CACHE_SIZE],
+            id_cache: CircularQueue::with_capacity(ID_CACHE_SIZE),
             last_id: 1,
             state: Unathenticated,
         }
@@ -221,7 +214,7 @@ impl Client<Authenticated> {
         Self {
             stream: client.stream,
             buf: client.buf,
-            id_cache: [0; ID_CACHE_SIZE],
+            id_cache: client.id_cache,
             last_id: client.last_id,
             state: Authenticated {
                 id,
