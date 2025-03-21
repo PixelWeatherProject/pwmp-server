@@ -1,23 +1,13 @@
 use super::{config::Config, db::DatabaseClient, rate_limit::RateLimiter};
 use crate::server::client_handle::handle_client;
 use log::{debug, error, warn};
-use std::{
-    io::ErrorKind,
-    net::TcpListener,
-    panic,
-    sync::{
-        Arc,
-        atomic::{AtomicU32, Ordering},
-    },
-    thread,
-    time::Duration,
-};
-
-static CONNECTIONS: AtomicU32 = AtomicU32::new(0);
+use semaphore::Semaphore;
+use std::{io::ErrorKind, net::TcpListener, panic, sync::Arc, thread, time::Duration};
 
 #[allow(clippy::needless_pass_by_value)]
 pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>) {
     let shared_db = Arc::new(db);
+    let connections = Semaphore::new(config.limits.devices as _, ());
     let mut rate_limiter = RateLimiter::new(
         Duration::from_secs(config.rate_limits.time_frame),
         config.rate_limits.max_connections,
@@ -25,19 +15,7 @@ pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>
 
     loop {
         let (client, peer_addr) = match server.accept() {
-            Ok(res) => {
-                if CONNECTIONS.load(Ordering::Relaxed) == config.limits.devices {
-                    warn!("Maximum number of connections reached, ignoring connection");
-                    continue;
-                }
-
-                if rate_limiter.hit() {
-                    warn!("Exceeded rate limit for accepting incoming connections");
-                    continue;
-                }
-
-                res
-            }
+            Ok(res) => res,
             Err(why) if why.kind() == ErrorKind::WouldBlock => continue,
             Err(why) => {
                 error!("Failed to accept connection: {why}");
@@ -46,25 +24,32 @@ pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>
         };
 
         debug!("New client: {peer_addr}");
+
+        debug!("Incrementing connection count");
+        let Ok(semguard) = connections.try_access() else {
+            warn!("Maximum number of connections reached, ignoring connection");
+            continue;
+        };
+
+        if rate_limiter.hit() {
+            warn!("Exceeded rate limit for accepting incoming connections");
+            continue;
+        }
+
         debug!("{:?}: Setting socket parameters", peer_addr);
         if let Err(why) = super::set_global_socket_params(&client, &config) {
             error!("{:?}: Failed to set socket parameters: {why}", peer_addr);
             continue;
         };
 
-        debug!("Incrementing connection count");
-        CONNECTIONS.fetch_add(1, Ordering::Relaxed);
-        if CONNECTIONS.load(Ordering::Relaxed) == config.limits.devices {
-            warn!("Reached maximum number of connections, new connections will be blocked");
-        }
-
         {
             let config = Arc::clone(&config);
             let db = shared_db.clone();
-            debug!("Connection count: {}", CONNECTIONS.load(Ordering::SeqCst));
 
             debug!("Starting client thread");
             thread::spawn(move || {
+                let _semguard = semguard;
+
                 debug!("Setting panic hook for thread");
                 set_panic_hook();
 
@@ -77,17 +62,13 @@ pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>
                         error!("{peer_addr}: Failed to handle: {why}");
                     }
                 }
-
-                debug!("Decrementing connection count");
-                CONNECTIONS.fetch_sub(1, Ordering::Relaxed);
             });
         }
     }
 }
 
 fn set_panic_hook() {
-    panic::set_hook(Box::new(move |_| {
-        warn!("A client thread has paniced");
-        CONNECTIONS.fetch_sub(1, Ordering::Relaxed);
+    panic::set_hook(Box::new(move |info| {
+        warn!("A client thread has paniced: {info:?}");
     }));
 }
