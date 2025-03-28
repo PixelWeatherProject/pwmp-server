@@ -36,9 +36,9 @@ pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>
             continue;
         }
 
-        debug!("{:?}: Setting socket parameters", peer_addr);
+        debug!("{peer_addr:?}: Setting socket parameters");
         if let Err(why) = super::set_global_socket_params(&client, &config) {
-            error!("{:?}: Failed to set socket parameters: {why}", peer_addr);
+            error!("{peer_addr:?}: Failed to set socket parameters: {why}");
             continue;
         };
 
