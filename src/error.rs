@@ -15,12 +15,8 @@ pub enum Error {
     NotHandshake,
 
     /// Database error.
-    #[error("Database error: {0}")]
-    Database(#[from] sqlx::Error),
-
-    /// Database migration error.
-    #[error("Database migration error: {0}")]
-    DatabaseMigration(#[from] sqlx::migrate::MigrateError),
+    #[error("Database error: {0:?}")]
+    Database(#[from] DatabaseError),
 
     /// Failed to set up the logger.
     #[error("Failed to set global logger")]
@@ -57,4 +53,13 @@ pub enum Error {
     /// Invalid message length.
     #[error("Message is too large to send")]
     MessageTooLarge,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum DatabaseError {
+    #[error(transparent)]
+    Sqlite(#[from] r2d2_sqlite::rusqlite::Error),
+
+    #[error(transparent)]
+    Postgres(#[from] r2d2_postgres::postgres::Error),
 }

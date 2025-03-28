@@ -1,5 +1,6 @@
-use crate::server::{db::DatabaseClient, handle::server_loop};
+use crate::server::handle::server_loop;
 use config::Config;
+use db::{Pool, PoolTrait};
 use libc::{
     IPPROTO_TCP, SO_KEEPALIVE, SO_LINGER, SO_RCVTIMEO, SO_SNDTIMEO, SOL_SOCKET, TCP_NODELAY,
     linger, socklen_t, timeval,
@@ -18,7 +19,7 @@ pub fn main(config: Config) {
     let config = Arc::new(config);
 
     info!("Connecting to database at \"{}\"", config.database.host);
-    let db = match DatabaseClient::new(&config) {
+    let db = match Pool::connect(&config) {
         Ok(db) => db,
         Err(why) => {
             error!("Failed to connect to database: {why}");

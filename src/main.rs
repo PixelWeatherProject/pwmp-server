@@ -3,7 +3,6 @@ use cli::Command;
 use log::{debug, error, info};
 use server::config::Config;
 use simple_logger::SimpleLogger;
-use sqlx::migrate::Migrator;
 use std::process::exit;
 use time::macros::format_description;
 
@@ -13,8 +12,6 @@ mod error;
 mod server;
 mod svcmgr;
 mod tester;
-
-pub static MIGRATOR: Migrator = sqlx::migrate!();
 
 fn main() -> Result<(), error::Error> {
     let args = cli::Cli::parse();
