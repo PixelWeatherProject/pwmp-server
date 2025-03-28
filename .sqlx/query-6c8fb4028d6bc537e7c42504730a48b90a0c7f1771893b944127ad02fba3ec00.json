@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "TRUNCATE statistics,\nmeasurements,\nsettings,\nnotifications,\nfirmware_stats,\nfirmwares,\ndevices RESTART IDENTITY CASCADE;",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "6c8fb4028d6bc537e7c42504730a48b90a0c7f1771893b944127ad02fba3ec00"
+}
