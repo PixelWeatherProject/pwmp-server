@@ -1,0 +1,24 @@
+name: Run static analysis on commit
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  SQLX_OFFLINE: true
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build debug
+      run: cargo build --locked
+    - name: Build release
+      run: cargo build --locked
+    - name: Run clippy
+      run: cargo clippy -- -W clippy::pedantic -W clippy::nursery
