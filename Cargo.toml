@@ -43,7 +43,6 @@ simple_logger = { version = "5.0.0", default-features = false, features = [
 ] }
 thiserror = "2.0.11"
 time = { version = "0.3.37", default-features = false, features = ["macros"] }
-rust_decimal = { version = "1.36.0", features = ["db-diesel-postgres"] }
 users = { version = "0.11.0", default-features = false }
 serde_with = "3.12.0"
 color-print = "0.3.7"

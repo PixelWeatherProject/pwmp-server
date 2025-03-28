@@ -78,17 +78,18 @@ TODO:
 Service management on Windows is **not** and **will not** be supported.
 
 # Compiling caveats and portability
-Due to some dependencies relying on glibc, you may not be able to run the binary on distributions like Alpine Linux (`gcompat` may **not** work). Furthermore, due to the PostgreSQL library (`libpq`) relying on `pthread`, you will not be able to compile for `musl` targets.
+In general, *x86* and *aarch64* are well-supported with *Linux*. macOS *should* theoretically work. Windows is **not** supported and there are no plans for it.
+Cross-compilation to macOS requires additional setup, due to licensing restrictions.
 
 ### Platform support table
 **Note**: This incomplete and may change in the future!
 |          **Target**           | **Supported** | **`cargo-cross` support** |
 | :---------------------------: | :-----------: | :-----------------------: |
 |  `x86_64-unknown-linux-gnu`   |       ✅       |             ✅             |
-|  `x86_64-unknown-linux-musl`  |       ❌       |             ❌             |
+|  `x86_64-unknown-linux-musl`  |       ✅       |             ✅             |
+|   `x86_64-unknown-freebsd`    |       ❌       |            N/A            |
+|      `x86_64-pc-solaris`      |       ❌       |            N/A            |
 |  `aarch64-unknown-linux-gnu`  |       ✅       |             ✅             |
+| `aarch64-unknown-linux-musl`  |       ✅       |             ✅             |
 |    `aarch64-apple-darwin`     |       ✅       |             ❌             |
-| `aarch64-unknown-linux-musl`  |       ❌       |             ❌             |
-| `armv7-unknown-linux-gnueabi` |       ❌       |             ❌             |
-
-In general, *x86* and *aarch64* are well-supported with *Linux*. macOS *should* theoretically work. Windows is **not** supported and there are no plans for it.
+| `armv7-unknown-linux-gnueabi` |       ✅       |             ✅             |

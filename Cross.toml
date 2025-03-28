@@ -1,11 +1,15 @@
-[build]
-pre-build = [
-    "dpkg --add-architecture $CROSS_DEB_ARCH",
-    "apt-get update && apt-get --assume-yes install libpq-dev:$CROSS_DEB_ARCH",
-]
+# Additional configuration for other targets
+# If you want to add support for other targets, you may need to install `libpq-dev`.
+# pre-build = [
+#     "dpkg --add-architecture $CROSS_DEB_ARCH",
+#     "apt-get update && apt-get --assume-yes install libpq-dev:$CROSS_DEB_ARCH",
+# ]
 
 [target.x86_64-unknown-linux-gnu]
 image = "ghcr.io/cross-rs/x86_64-unknown-linux-gnu:main"
 
 [target.aarch64-unknown-linux-gnu]
 image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu:main"
+
+[target.aarch64-apple-darwin]
+image = "ghcr.io/cross-rs/aarch64-apple-darwin:main"
