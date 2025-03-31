@@ -330,12 +330,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f46ad14479a25103f283c0f10005961cf086d8dc42205bb44c46ac563475dca6"
 
 [[package]]
-name = "cobs"
-version = "0.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67ba02a97a2bd10f4b59b25c7973101c79642302776489e030cd13cdab09ed15"
-
-[[package]]
 name = "color-print"
 version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -589,18 +583,6 @@ checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 dependencies = [
  "serde",
 ]
-
-[[package]]
-name = "embedded-io"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef1a6892d9eef45c8fa6b9e0086428a2cca8491aca8f787c534a3d6d0bcb3ced"
-
-[[package]]
-name = "embedded-io"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "edd0f118536f44f5ccd48bcb8b111bdc3de888b58c74639dfb034a357d0f206d"
 
 [[package]]
 name = "equivalent"
@@ -1431,18 +1413,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
 
 [[package]]
-name = "postcard"
-version = "1.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "170a2601f67cc9dba8edd8c4870b15f71a6a2dc196daec8c83f72b59dff628a8"
-dependencies = [
- "cobs",
- "embedded-io 0.4.0",
- "embedded-io 0.6.1",
- "serde",
-]
-
-[[package]]
 name = "powerfmt"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1498,7 +1468,7 @@ dependencies = [
 [[package]]
 name = "pwmp-client"
 version = "2.1.2"
-source = "git+https://github.com/PixelWeatherProject/pwmp-client.git?tag=v2.1.2#f89c09752f7d4f3f63362be969f38f372c052c10"
+source = "git+https://github.com/PixelWeatherProject/pwmp-client.git?branch=json-experimental#b4968a2ee6b2690a9705d4c0cf7682c1ce3fc9e4"
 dependencies = [
  "arrayref",
  "libc",
@@ -1509,13 +1479,13 @@ dependencies = [
 [[package]]
 name = "pwmp-msg"
 version = "2.1.2"
-source = "git+https://github.com/PixelWeatherProject/pwmp-msg?tag=v2.1.2#71c8f897e538192f29d9cd7df6fec10917ebcca7"
+source = "git+https://github.com/PixelWeatherProject/pwmp-msg?branch=json#691f3b75525c8163b4a2ca07785fe81fad3c399f"
 dependencies = [
  "derive_more",
- "postcard",
  "rust_decimal",
  "rust_decimal_macros",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
