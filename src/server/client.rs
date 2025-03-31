@@ -136,7 +136,8 @@ impl<S> Client<S> {
         self.stream.read_exact(&mut self.buf[..message_length])?;
 
         // Parse the message.
-        let message = Message::deserialize(&self.buf).ok_or(Error::MessageParse)?;
+        let message =
+            Message::deserialize(&self.buf[..message_length]).ok_or(Error::MessageParse)?;
 
         // Check if it's not a duplicate.
         if self.is_id_cached(message.id()) {
