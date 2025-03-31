@@ -113,7 +113,8 @@ impl<S> Client<S> {
 
         // Parse the length
         let message_length: usize =
-            u32::from_be_bytes(*array_ref![self.buf, 0, size_of::<u32>()]).try_into()?;
+            MsgLength::from_be_bytes(*array_ref![self.buf, 0, size_of::<MsgLength>()])
+                .try_into()?;
 
         // Verify the length
         if message_length == 0 {
