@@ -38,13 +38,19 @@ fn main() -> Result<(), error::Error> {
     let config_path = args.config.unwrap_or_else(Config::default_path);
     info!("Loading config from {}", config_path.display());
 
-    let config: Config = match confy::load_path(config_path) {
+    let first_run = !config_path.exists();
+    let config: Config = match confy::load_path(&config_path) {
         Ok(config) => config,
         Err(why) => {
             error!("Failed to load configuration: {why}");
             exit(1);
         }
     };
+
+    if first_run {
+        info!("Configuration initialized at {}", config_path.display());
+        return Ok(());
+    }
 
     match args.command {
         Some(Command::Service { command }) => svcmgr::main(command),
