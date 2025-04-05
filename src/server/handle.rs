@@ -40,7 +40,7 @@ pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>
         if let Err(why) = super::set_global_socket_params(&client, &config) {
             error!("{peer_addr:?}: Failed to set socket parameters: {why}");
             continue;
-        };
+        }
 
         {
             let config = Arc::clone(&config);
