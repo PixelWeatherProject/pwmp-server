@@ -1,6 +1,6 @@
 use crate::{
     cli::DatabaseCommand,
-    server::{config::Config, db::DatabaseClient},
+    server::{config::Config, db::setup_database},
 };
 use color_print::cprintln;
 use log::{debug, error, info};
@@ -8,13 +8,13 @@ use std::{io::stdin, process::exit};
 
 pub fn main(cmd: DatabaseCommand, config: &Config) {
     match cmd {
-        DatabaseCommand::Test => match DatabaseClient::new(config) {
+        DatabaseCommand::Test => match setup_database(config) {
             Ok(_) => info!("Connection successful"),
             Err(why) => error!("Failed to connect: {why}"),
         },
         DatabaseCommand::Init => {
             debug!("Initializing database pool");
-            let client = match DatabaseClient::new(config) {
+            let client = match setup_database(config) {
                 Ok(conn) => conn,
                 Err(why) => {
                     error!("Failed to connect: {why}");
@@ -32,7 +32,7 @@ pub fn main(cmd: DatabaseCommand, config: &Config) {
             content_only,
             keep_devices,
         } => {
-            let client = match DatabaseClient::new(config) {
+            let client = match setup_database(config) {
                 Ok(conn) => conn,
                 Err(why) => {
                     error!("Failed to connect: {why}");
@@ -41,7 +41,7 @@ pub fn main(cmd: DatabaseCommand, config: &Config) {
             };
 
             info!("Connected to the database");
-            confirm_erase(&config.database.name, &config.database.host);
+            confirm_erase(&config.short_database_id());
 
             match client.erase(content_only, keep_devices) {
                 Ok(()) => info!("Success!"),
@@ -51,10 +51,12 @@ pub fn main(cmd: DatabaseCommand, config: &Config) {
     }
 }
 
-fn confirm_erase(database_name: &str, host: &str) {
+fn confirm_erase(db_ident: &str) {
     const KEY: &str = "yes, do it!";
 
-    cprintln!("\n<red><bold><underline>WARNING:</> <yellow>THIS ACTION WILL COMPLETELE ERASE <underline>ALL DATA</underline> AND <italic>(IF SPECIFIED)</italic> <underline>TABLES</underline> FROM THE DATABASE</> <bright-blue><bold>\"{database_name}\"</> <yellow>ON</> <bright-blue>\"{host}\"</> <yellow><bold>!!!</>");
+    cprintln!(
+        "\n<red><bold><underline>WARNING:</> <yellow>THIS ACTION WILL COMPLETELE ERASE <underline>ALL DATA</underline> AND <italic>(IF SPECIFIED)</italic> <underline>TABLES</underline> FROM THE DATABASE</> <bright-blue><bold>\"{db_ident}\"</> <yellow><bold>!!!</>"
+    );
     cprintln!("\n<blue>TYPE <italic>\"{KEY}\"</italic> TO CONFIRM THIS OPERATION!</>");
 
     let mut buf = String::new();

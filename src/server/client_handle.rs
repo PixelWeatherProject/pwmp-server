@@ -1,7 +1,7 @@
 use super::{
     client::{Authenticated, Client},
     config::Config,
-    db::DatabaseClient,
+    db::AbstractDatabaseClient,
     rate_limit::RateLimiter,
 };
 use crate::error::Error;
@@ -17,7 +17,7 @@ use std::{
 #[allow(clippy::needless_pass_by_value)]
 pub fn handle_client(
     client: TcpStream,
-    db: &DatabaseClient,
+    db: &AbstractDatabaseClient,
     config: Arc<Config>,
 ) -> Result<(), Error> {
     let client = Client::new(client);
@@ -77,7 +77,7 @@ pub fn handle_client(
 fn handle_request(
     req: Request,
     client: &mut Client<Authenticated>,
-    db: &DatabaseClient,
+    db: &AbstractDatabaseClient,
 ) -> Result<Response, Error> {
     debug!("Handling {req:#?}");
 

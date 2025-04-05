@@ -25,13 +25,26 @@ pub struct ServerConfig {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct DatabaseConfig {
+pub enum DatabaseConfig {
+    #[serde(rename = "POSTGRES")]
+    Postgres(PostgresConfig),
+    #[serde(rename = "SQLITE")]
+    Sqlite(SqliteConfig),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PostgresConfig {
     pub host: Box<str>,
     pub port: u16,
     pub user: Box<str>,
     pub password: Box<str>,
     pub name: Box<str>,
     pub ssl: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SqliteConfig {
+    pub path: PathBuf,
 }
 
 #[serde_as]
@@ -71,14 +84,14 @@ impl Default for ServerConfig {
 
 impl Default for DatabaseConfig {
     fn default() -> Self {
-        Self {
+        Self::Postgres(PostgresConfig {
             host: "192.168.0.12".into(),
             port: 5432,
             user: "root".into(),
             password: "root".into(),
             name: "pixelweather".into(),
             ssl: false,
-        }
+        })
     }
 }
 
@@ -102,5 +115,17 @@ impl Config {
 
     pub const fn server_bind_addr(&self) -> SocketAddrV4 {
         SocketAddrV4::new(self.server.host, self.server.port)
+    }
+
+    pub fn short_database_id(&self) -> String {
+        match self.database {
+            DatabaseConfig::Postgres(ref params) => params.host.clone().into_string(),
+            DatabaseConfig::Sqlite(ref params) => params
+                .path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string(),
+        }
     }
 }

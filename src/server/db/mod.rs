@@ -1,0 +1,63 @@
+use super::config::{Config, DatabaseConfig};
+use crate::error::Error;
+use pwmp_client::pwmp_msg::{
+    aliases::{AirPressure, BatteryVoltage, Humidity, Rssi, Temperature},
+    mac::Mac,
+    settings::NodeSettings,
+    version::Version,
+};
+
+mod postgres;
+mod sqlite;
+
+pub type AbstractDatabaseClient = Box<dyn DatabaseClientTrait + Send + Sync>;
+pub type NodeId = i32;
+pub type MeasurementId = i32;
+pub type FirmwareBlob = Box<[u8]>;
+pub type UpdateStatId = i32;
+
+pub fn setup_database(config: &Config) -> Result<AbstractDatabaseClient, Error> {
+    match config.database {
+        DatabaseConfig::Postgres(..) => {
+            Ok(Box::new(postgres::PostgresDatabaseClient::new(config)?))
+        }
+        DatabaseConfig::Sqlite(..) => todo!(),
+    }
+}
+
+pub trait DatabaseClientTrait {
+    fn new(config: &Config) -> Result<Self, Error>
+    where
+        Self: Sized;
+    fn authorize_device(&self, mac: &Mac) -> Result<Option<NodeId>, Error>;
+    fn create_notification(&self, node_id: NodeId, content: &str) -> Result<(), Error>;
+    fn get_settings(&self, node_id: NodeId) -> Result<Option<NodeSettings>, Error>;
+    fn post_results(
+        &self,
+        node: NodeId,
+        temp: Temperature,
+        hum: Humidity,
+        air_p: Option<AirPressure>,
+    ) -> Result<MeasurementId, Error>;
+    fn post_stats(
+        &self,
+        measurement: MeasurementId,
+        battery: &BatteryVoltage,
+        wifi_ssid: &str,
+        wifi_rssi: Rssi,
+    ) -> Result<(), Error>;
+    fn run_migrations(&self) -> Result<(), Error>;
+    fn check_os_update(
+        &self,
+        node: NodeId,
+        current_ver: Version,
+    ) -> Result<Option<(Version, FirmwareBlob)>, Error>;
+    fn send_os_update_stat(
+        &self,
+        node_id: NodeId,
+        old_ver: Version,
+        new_ver: Version,
+    ) -> Result<UpdateStatId, Error>;
+    fn mark_os_update_stat(&self, node_id: NodeId, success: bool) -> Result<(), Error>;
+    fn erase(&self, content_only: bool, keep_devices: bool) -> Result<(), Error>;
+}

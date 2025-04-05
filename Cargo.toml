@@ -24,6 +24,8 @@ sqlx = { version = "0.8.3", default-features = false, features = [
     "macros",
     "rust_decimal",
     "tls-rustls",
+    "sqlite",
+    "any",
 ] }
 tokio = { version = "1.43.0", default-features = false, features = [
     "rt-multi-thread",

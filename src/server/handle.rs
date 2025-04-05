@@ -1,11 +1,11 @@
-use super::{config::Config, db::DatabaseClient, rate_limit::RateLimiter};
+use super::{config::Config, db::AbstractDatabaseClient, rate_limit::RateLimiter};
 use crate::server::client_handle::handle_client;
 use log::{debug, error, warn};
 use semaphore::Semaphore;
 use std::{io::ErrorKind, net::TcpListener, panic, sync::Arc, thread, time::Duration};
 
 #[allow(clippy::needless_pass_by_value)]
-pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>) {
+pub fn server_loop(server: &TcpListener, db: AbstractDatabaseClient, config: Arc<Config>) {
     let shared_db = Arc::new(db);
     let connections = Semaphore::new(config.limits.devices as _, ());
     let mut rate_limiter = RateLimiter::new(

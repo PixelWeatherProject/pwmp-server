@@ -1,5 +1,8 @@
-use super::config::Config;
-use crate::error::Error;
+use super::{FirmwareBlob, MeasurementId, NodeId, UpdateStatId};
+use crate::{
+    error::Error,
+    server::config::{Config, DatabaseConfig},
+};
 use pwmp_client::pwmp_msg::{
     aliases::{AirPressure, BatteryVoltage, Humidity, Rssi, Temperature},
     mac::Mac,
@@ -12,12 +15,7 @@ use sqlx::{
 };
 use tokio::runtime::Runtime;
 
-pub type NodeId = i32;
-pub type MeasurementId = i32;
-pub type FirmwareBlob = Box<[u8]>;
-pub type UpdateStatId = i32;
-
-pub struct DatabaseClient {
+pub struct PostgresDatabaseClient {
     rt: Runtime,
     pool: Pool<Postgres>,
 }
@@ -30,17 +28,21 @@ macro_rules! query {
     };
 }
 
-impl DatabaseClient {
-    pub fn new(config: &Config) -> Result<Self, Error> {
+impl super::DatabaseClientTrait for PostgresDatabaseClient {
+    fn new(config: &Config) -> Result<Self, Error> {
         let rt = Runtime::new()?;
-        let mut opts = PgConnectOptions::new()
-            .host(&config.database.host)
-            .port(config.database.port)
-            .username(&config.database.user)
-            .password(&config.database.password)
-            .database(&config.database.name);
+        let DatabaseConfig::Postgres(params) = &config.database else {
+            panic!("database config is not postgres");
+        };
 
-        if config.database.ssl {
+        let mut opts = PgConnectOptions::new()
+            .host(&params.host)
+            .port(params.port)
+            .username(&params.user)
+            .password(&params.password)
+            .database(&params.name);
+
+        if params.ssl {
             opts = opts.ssl_mode(PgSslMode::Require);
         }
 
@@ -54,7 +56,7 @@ impl DatabaseClient {
         Ok(Self { rt, pool })
     }
 
-    pub fn authorize_device(&self, mac: &Mac) -> Result<Option<NodeId>, Error> {
+    fn authorize_device(&self, mac: &Mac) -> Result<Option<NodeId>, Error> {
         let mac = mac.to_string();
 
         let result = query!(
@@ -72,7 +74,7 @@ impl DatabaseClient {
         }
     }
 
-    pub fn create_notification(&self, node_id: NodeId, content: &str) -> Result<(), Error> {
+    fn create_notification(&self, node_id: NodeId, content: &str) -> Result<(), Error> {
         query!(
             self.rt,
             self.pool,
@@ -85,7 +87,7 @@ impl DatabaseClient {
         Ok(())
     }
 
-    pub fn get_settings(&self, node_id: NodeId) -> Result<Option<NodeSettings>, Error> {
+    fn get_settings(&self, node_id: NodeId) -> Result<Option<NodeSettings>, Error> {
         let result = query!(
             self.rt,
             self.pool,
@@ -107,7 +109,7 @@ impl DatabaseClient {
         }
     }
 
-    pub fn post_results(
+    fn post_results(
         &self,
         node: NodeId,
         temp: Temperature,
@@ -133,7 +135,7 @@ impl DatabaseClient {
         Ok(result.id)
     }
 
-    pub fn post_stats(
+    fn post_stats(
         &self,
         measurement: MeasurementId,
         battery: &BatteryVoltage,
@@ -154,14 +156,14 @@ impl DatabaseClient {
         Ok(())
     }
 
-    pub fn run_migrations(&self) -> Result<(), Error> {
+    fn run_migrations(&self) -> Result<(), Error> {
         self.rt
             .block_on(async { crate::MIGRATOR.run(&self.pool).await })?;
 
         Ok(())
     }
 
-    pub fn check_os_update(
+    fn check_os_update(
         &self,
         node: NodeId,
         current_ver: Version,
@@ -193,7 +195,7 @@ impl DatabaseClient {
         }
     }
 
-    pub fn send_os_update_stat(
+    fn send_os_update_stat(
         &self,
         node_id: NodeId,
         old_ver: Version,
@@ -219,7 +221,7 @@ impl DatabaseClient {
         Ok(result.id)
     }
 
-    pub fn mark_os_update_stat(&self, node_id: NodeId, success: bool) -> Result<(), Error> {
+    fn mark_os_update_stat(&self, node_id: NodeId, success: bool) -> Result<(), Error> {
         let last_update_id = self.get_last_os_update_stat(node_id)?;
 
         query!(
@@ -234,7 +236,7 @@ impl DatabaseClient {
         Ok(())
     }
 
-    pub fn erase(&self, content_only: bool, keep_devices: bool) -> Result<(), Error> {
+    fn erase(&self, content_only: bool, keep_devices: bool) -> Result<(), Error> {
         if content_only {
             if keep_devices {
                 query!(
@@ -271,7 +273,9 @@ impl DatabaseClient {
 
         Ok(())
     }
+}
 
+impl PostgresDatabaseClient {
     fn get_last_os_update_stat(&self, node_id: NodeId) -> Result<UpdateStatId, Error> {
         Ok(query!(
             self.rt,

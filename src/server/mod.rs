@@ -1,4 +1,4 @@
-use crate::server::{db::DatabaseClient, handle::server_loop};
+use crate::server::handle::server_loop;
 use config::Config;
 use libc::{
     IPPROTO_TCP, SO_KEEPALIVE, SO_LINGER, SO_RCVTIMEO, SO_SNDTIMEO, SOL_SOCKET, TCP_NODELAY,
@@ -17,8 +17,8 @@ pub mod rate_limit;
 pub fn main(config: Config) {
     let config = Arc::new(config);
 
-    info!("Connecting to database at \"{}\"", config.database.host);
-    let db = match DatabaseClient::new(&config) {
+    info!("Connecting to database \"{}\"", config.short_database_id());
+    let db = match db::setup_database(&config) {
         Ok(db) => db,
         Err(why) => {
             error!("Failed to connect to database: {why}");

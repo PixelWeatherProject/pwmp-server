@@ -1,4 +1,4 @@
-use super::db::{DatabaseClient, FirmwareBlob, MeasurementId, NodeId};
+use super::db::{AbstractDatabaseClient, FirmwareBlob, MeasurementId, NodeId};
 use crate::error::Error;
 use arrayref::array_ref;
 use circular_queue::CircularQueue;
@@ -168,7 +168,7 @@ impl Client<Unathenticated> {
         }
     }
 
-    pub fn authorize(mut self, db: &DatabaseClient) -> Result<Client<Authenticated>> {
+    pub fn authorize(mut self, db: &AbstractDatabaseClient) -> Result<Client<Authenticated>> {
         debug!("{}: Awaiting greeting", self.peer_addr_str());
         let mac = self.receive_handshake()?;
 
