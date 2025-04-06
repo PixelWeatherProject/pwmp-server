@@ -96,3 +96,16 @@ Cross-compilation to macOS requires additional setup, due to licensing restricti
 | `aarch64-unknown-linux-musl`  |       ✅       |             ✅             |
 |    `aarch64-apple-darwin`     |       ✅       |             ❌             |
 | `armv7-unknown-linux-gnueabi` |       ✅       |             ✅             |
+
+# Docker support
+You can build a Docker image using the provided [`Dockerfile`](./Dockerfile).
+
+```sh
+docker build -t pwmp-server .
+```
+
+You can test the container using the following command:
+```sh
+# Note that the config already exists on the host!
+docker run --rm -it -v ~/.pwmp-server:/config:ro pwmp-server
+```
