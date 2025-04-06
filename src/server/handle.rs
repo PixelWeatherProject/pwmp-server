@@ -23,7 +23,7 @@ pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>
 
     ctrlc::set_handler(move || {
         info!("Stop requested, please wait");
-        stop_sender.send(()).expect("Failed to send stop signal")
+        stop_sender.send(()).expect("Failed to send stop signal");
     })
     .expect("Failed to register Ctrl-c handler");
 
