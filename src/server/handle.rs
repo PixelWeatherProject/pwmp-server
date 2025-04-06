@@ -1,8 +1,15 @@
 use super::{config::Config, db::DatabaseClient, rate_limit::RateLimiter};
 use crate::server::client_handle::handle_client;
-use log::{debug, error, warn};
+use log::{debug, error, info, warn};
 use semaphore::Semaphore;
-use std::{io::ErrorKind, net::TcpListener, panic, sync::Arc, thread, time::Duration};
+use std::{
+    io::ErrorKind,
+    net::TcpListener,
+    panic,
+    sync::{Arc, mpsc},
+    thread,
+    time::Duration,
+};
 
 #[allow(clippy::needless_pass_by_value)]
 pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>) {
@@ -12,8 +19,20 @@ pub fn server_loop(server: &TcpListener, db: DatabaseClient, config: Arc<Config>
         Duration::from_secs(config.rate_limits.time_frame),
         config.rate_limits.max_connections,
     );
+    let (stop_sender, stop_receiver) = mpsc::channel::<()>();
+
+    ctrlc::set_handler(move || {
+        info!("Stop requested, please wait");
+        stop_sender.send(()).expect("Failed to send stop signal")
+    })
+    .expect("Failed to register Ctrl-c handler");
 
     loop {
+        if stop_receiver.try_recv().is_ok() {
+            info!("Stopping server");
+            break;
+        }
+
         let (client, peer_addr) = match server.accept() {
             Ok(res) => res,
             Err(why) if why.kind() == ErrorKind::WouldBlock => continue,
