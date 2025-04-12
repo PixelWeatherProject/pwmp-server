@@ -51,3 +51,4 @@ libc = { version = "0.2.171", default-features = false }
 semaphore = "0.4.0"
 circular-queue = "0.2.7"
 ctrlc = "3.4.6"
+signal-hook = "0.3.17"

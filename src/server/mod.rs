@@ -5,7 +5,10 @@ use libc::{
     linger, socklen_t, timeval,
 };
 use log::{error, info};
-use std::{ffi::c_int, io, mem, net::TcpListener, os::fd::AsRawFd, process::exit, sync::Arc};
+use signal::SignalHandle;
+use std::{
+    ffi::c_int, io, mem, net::TcpListener, os::fd::AsRawFd, process::exit, sync::Arc, thread,
+};
 
 mod client;
 mod client_handle;
@@ -13,6 +16,7 @@ pub mod config;
 pub mod db;
 pub mod handle;
 pub mod rate_limit;
+pub mod signal;
 
 pub fn main(config: Config) {
     let config = Arc::new(config);
@@ -39,8 +43,26 @@ pub fn main(config: Config) {
         exit(1);
     }
 
+    let (stop_sig, ping_sig) = setup_signals();
+
     info!("Server started on {}", config.server_bind_addr());
-    server_loop(&server, db, config);
+    server_loop(&server, db, config, stop_sig, ping_sig);
+}
+
+fn setup_signals() -> (SignalHandle, SignalHandle) {
+    let stop_sig = SignalHandle::new(signal_hook::consts::SIGINT);
+    let ping_sing = SignalHandle::new(signal_hook::consts::SIGUSR1);
+
+    {
+        let stop_sig_copy = stop_sig.clone();
+
+        thread::spawn(move || {
+            while !stop_sig_copy.is_set() {}
+            info!("Stop requested, please wait");
+        });
+    }
+
+    (stop_sig, ping_sing)
 }
 
 pub fn set_global_socket_params<FD: AsRawFd>(socket: &FD, config: &Arc<Config>) -> io::Result<()> {
