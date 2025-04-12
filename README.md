@@ -4,10 +4,10 @@ This crate contains the PixelWeather Messaging Protocol Server and CLI.
 #### CI Stats
 [![Run static analysis on commit](https://github.com/PixelWeatherProject/pwmp-server/actions/workflows/verify_commits.yml/badge.svg)](https://github.com/PixelWeatherProject/pwmp-server/actions/workflows/verify_commits.yml) | [![Release tagged versions](https://github.com/PixelWeatherProject/pwmp-server/actions/workflows/release.yml/badge.svg)](https://github.com/PixelWeatherProject/pwmp-server/actions/workflows/release.yml)
 
-# Server configuration
+## Server configuration
 The server will read the configuration file from `~/.config/pwmp-server/config.yml`. If it doesn't exist, it'll be created. Optionally, you can provide a `--config` flag, with an alternative path.
 
-## Defaults
+### Defaults
 ```yml
 # Server binding
 host: "0.0.0.0"
@@ -44,14 +44,14 @@ rate_limiter:
   max_connections: 4
 ```
 
-# Database server
+## Database server
 Only PostgreSQL is supported. It's recommended to use the latest version.
 
 Compatibility has been verified with the following versions:
 - 16.x
 - 17.4
 
-# Using as a service
+## Using as a service
 The CLI has a `service` subcommand, which allows managing a background service.
 
 ```
@@ -80,11 +80,22 @@ TODO:
 
 Service management on Windows is **not** and **will not** be supported.
 
-# Compiling caveats and portability
+## Signal handling
+The server can be peacefully terminated using `SIGINT`:
+```sh
+kill -SIGINT $(pidof pwmp-server)
+```
+
+You can also send a simple "ping" request using `SIGUSR1`:
+```sh
+kill -SIGUSR1 $(pidof pwmp-server)
+```
+
+## Compiling caveats and portability
 In general, *x86* and *aarch64* are well-supported with *Linux*. macOS *should* theoretically work. Windows is **not** supported and there are no plans for it.
 Cross-compilation to macOS requires additional setup, due to licensing restrictions.
 
-### Platform support table
+#### Platform support table
 **Note**: This incomplete and may change in the future!
 |          **Target**           | **Supported** | **`cargo-cross` support** |
 | :---------------------------: | :-----------: | :-----------------------: |
@@ -97,7 +108,7 @@ Cross-compilation to macOS requires additional setup, due to licensing restricti
 |    `aarch64-apple-darwin`     |       ✅       |             ❌             |
 | `armv7-unknown-linux-gnueabi` |       ✅       |             ✅             |
 
-# Docker support
+## Docker support
 You can build a Docker image using the provided [`Dockerfile`](./Dockerfile).
 
 ```sh
