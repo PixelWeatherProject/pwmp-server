@@ -136,7 +136,7 @@ impl DatabaseClient {
     pub fn post_stats(
         &self,
         measurement: MeasurementId,
-        battery: &BatteryVoltage,
+        battery: BatteryVoltage,
         wifi_ssid: &str,
         wifi_rssi: Rssi,
     ) -> Result<(), Error> {

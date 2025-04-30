@@ -16,14 +16,14 @@ codegen-units = 1
 strip = true
 
 [dependencies]
-pwmp-client = { git = "https://github.com/PixelWeatherProject/pwmp-client.git", tag = "v2.1.2" }
+pwmp-client = { git = "https://github.com/PixelWeatherProject/pwmp-client.git", tag = "v2.1.6" }
 sqlx = { version = "0.8.3", default-features = false, features = [
     "postgres",
     "runtime-tokio",
     "migrate",
     "macros",
-    "rust_decimal",
     "tls-rustls",
+    "bigdecimal",
 ] }
 tokio = { version = "1.43.0", default-features = false, features = [
     "rt-multi-thread",

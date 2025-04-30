@@ -2,7 +2,7 @@ use log::{debug, error, info};
 use pwmp_client::{
     PwmpClient,
     ota::UpdateStatus,
-    pwmp_msg::{Decimal, MsgId, dec, mac::Mac, version::Version},
+    pwmp_msg::{MsgId, mac::Mac, version::Version},
 };
 use std::{
     process::exit,
@@ -53,13 +53,13 @@ pub fn test(host: String, port: Option<u16>, raw_mac: String) {
     }
 
     debug!("Testing measurement posting");
-    if let Err(why) = client.post_measurements(dec!(0.00), 0, Some(0)) {
+    if let Err(why) = client.post_measurements(0.00, 0, Some(0)) {
         error!("Failed: {why}");
         exit(1);
     }
 
     debug!("Testing stats posting");
-    if let Err(why) = client.post_stats(dec!(3.70), "<PWMP Test>", -50) {
+    if let Err(why) = client.post_stats(3.70, "<PWMP Test>", -50) {
         error!("Failed: {why}");
         exit(1);
     }

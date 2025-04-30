@@ -113,7 +113,7 @@ fn handle_request(
             Ok(Response::Ok)
         }
         Request::PostStats {
-            ref battery,
+            battery,
             wifi_ssid,
             wifi_rssi,
         } => {
