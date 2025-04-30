@@ -6,7 +6,7 @@
     "parameters": {
       "Left": [
         "Int4",
-        "Numeric",
+        "Float4",
         "Varchar",
         "Int2"
       ]

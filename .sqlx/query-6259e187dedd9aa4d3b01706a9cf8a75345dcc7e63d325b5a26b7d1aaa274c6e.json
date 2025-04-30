@@ -12,7 +12,7 @@
     "parameters": {
       "Left": [
         "Int4",
-        "Numeric",
+        "Float4",
         "Int2",
         "Int2"
       ]
