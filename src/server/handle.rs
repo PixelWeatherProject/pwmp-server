@@ -28,7 +28,7 @@ pub async fn server_loop(
         select! {
             res = server.accept() => {
                 match res {
-                    Ok(res) => handle_new_client(res.0, res.1, Arc::clone(&shared_db), &connections, &mut rate_limiter, Arc::clone(&config)).await,
+                    Ok(res) => handle_new_client(res.0, res.1, Arc::clone(&shared_db), &connections, &mut rate_limiter, Arc::clone(&config)),
                     Err(why) => {
                         error!("Failed to accept connection: {why}");
                         return;
@@ -48,7 +48,7 @@ pub async fn server_loop(
     }
 }
 
-async fn handle_new_client(
+fn handle_new_client(
     client: TcpStream,
     peer_addr: SocketAddr,
     shared_db: Arc<DatabaseClient>,
@@ -75,28 +75,23 @@ async fn handle_new_client(
         return;
     }
 
-    {
-        let config = Arc::clone(&config);
-        let db = shared_db.clone();
+    debug!("Starting client task");
+    tokio::spawn(async move {
+        let _semguard = semguard;
 
-        debug!("Starting client task");
-        tokio::spawn(async move {
-            let _semguard = semguard;
+        debug!("Setting panic hook for thread");
+        set_panic_hook();
 
-            debug!("Setting panic hook for thread");
-            set_panic_hook();
-
-            debug!("Starting client handle");
-            match handle_client(client, &db, config).await {
-                Ok(()) => {
-                    debug!("{peer_addr}: Handled successfully");
-                }
-                Err(why) => {
-                    error!("{peer_addr}: Failed to handle: {why}");
-                }
+        debug!("Starting client handle");
+        match handle_client(client, &shared_db, config).await {
+            Ok(()) => {
+                debug!("{peer_addr}: Handled successfully");
             }
-        });
-    }
+            Err(why) => {
+                error!("{peer_addr}: Failed to handle: {why}");
+            }
+        }
+    });
 }
 
 fn set_panic_hook() {
