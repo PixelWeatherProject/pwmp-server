@@ -2,9 +2,11 @@ use crate::server::{db::DatabaseClient, handle::server_loop};
 use config::Config;
 use libc::{IPPROTO_TCP, SO_KEEPALIVE, SO_LINGER, SOL_SOCKET, TCP_NODELAY, linger, socklen_t};
 use log::{error, info};
-use signal::SignalHandle;
-use std::{ffi::c_int, io, mem, os::fd::AsRawFd, process::exit, sync::Arc, thread};
-use tokio::net::TcpListener;
+use std::{ffi::c_int, io, mem, os::fd::AsRawFd, process::exit, sync::Arc};
+use tokio::{
+    net::TcpListener,
+    signal::unix::{Signal, SignalKind, signal},
+};
 
 mod client;
 mod client_handle;
@@ -12,7 +14,6 @@ pub mod config;
 pub mod db;
 pub mod handle;
 pub mod rate_limit;
-pub mod signal;
 
 pub async fn main(config: Config) {
     let config = Arc::new(config);
@@ -45,20 +46,13 @@ pub async fn main(config: Config) {
     server_loop(&server, db, config, stop_sig, ping_sig).await;
 }
 
-fn setup_signals() -> (SignalHandle, SignalHandle) {
-    let stop_sig = SignalHandle::new(signal_hook::consts::SIGINT);
-    let ping_sing = SignalHandle::new(signal_hook::consts::SIGUSR1);
+fn setup_signals() -> (Signal, Signal) {
+    let stop_sig =
+        signal(SignalKind::interrupt()).expect("Failed to set up signal handler for SIGINT");
+    let ping_sig =
+        signal(SignalKind::user_defined1()).expect("Failed to set up signal handler for SIGUSR1");
 
-    {
-        let stop_sig_copy = stop_sig.clone();
-
-        thread::spawn(move || {
-            while !stop_sig_copy.is_set() {}
-            info!("Stop requested, please wait");
-        });
-    }
-
-    (stop_sig, ping_sing)
+    (stop_sig, ping_sig)
 }
 
 pub fn set_global_socket_params<FD: AsRawFd>(socket: &FD) -> io::Result<()> {

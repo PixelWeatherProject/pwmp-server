@@ -49,17 +49,18 @@ pub struct Authenticated {
 
 impl<S> Client<S> {
     pub async fn shutdown(&mut self, reason: Option<Response>) -> Result<()> {
-        debug!("{}: Attempting to shutdown socket", self.peer_addr_str());
+        let peer_addr = self.peer_addr_str();
+        debug!("{peer_addr}: Attempting to shutdown socket");
 
         if let Some(res) = reason {
-            debug!("{}: Sending reason code", self.peer_addr_str());
+            debug!("{peer_addr}: Sending reason code");
             if let Err(why) = self.send_response(res).await {
-                warn!("{}: Failed to send: {why}", self.peer_addr_str());
+                warn!("{peer_addr}: Failed to send: {why}");
             }
         }
 
         self.stream.shutdown().await?;
-        debug!("{}: Stream shut down", self.peer_addr_str());
+        debug!("{peer_addr}: Stream shut down");
         Ok(())
     }
 
