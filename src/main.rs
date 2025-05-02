@@ -16,7 +16,8 @@ mod tester;
 
 pub static MIGRATOR: Migrator = sqlx::migrate!();
 
-fn main() -> Result<(), error::Error> {
+#[tokio::main]
+async fn main() -> Result<(), error::Error> {
     let args = cli::Cli::parse();
 
     let logger = SimpleLogger::new().with_timestamp_format(format_description!(
@@ -54,9 +55,9 @@ fn main() -> Result<(), error::Error> {
 
     match args.command {
         Some(Command::Service { command }) => svcmgr::main(command),
-        Some(Command::Database { command }) => dbmgr::main(command, &config),
+        Some(Command::Database { command }) => dbmgr::main(command, &config).await,
         Some(Command::Test { host, mac, port }) => tester::test(host, port, mac),
-        None => server::main(config),
+        None => server::main(config).await,
     }
 
     Ok(())

@@ -1,14 +1,10 @@
 use crate::server::{db::DatabaseClient, handle::server_loop};
 use config::Config;
-use libc::{
-    IPPROTO_TCP, SO_KEEPALIVE, SO_LINGER, SO_RCVTIMEO, SO_SNDTIMEO, SOL_SOCKET, TCP_NODELAY,
-    linger, socklen_t, timeval,
-};
+use libc::{IPPROTO_TCP, SO_KEEPALIVE, SO_LINGER, SOL_SOCKET, TCP_NODELAY, linger, socklen_t};
 use log::{error, info};
 use signal::SignalHandle;
-use std::{
-    ffi::c_int, io, mem, net::TcpListener, os::fd::AsRawFd, process::exit, sync::Arc, thread,
-};
+use std::{ffi::c_int, io, mem, os::fd::AsRawFd, process::exit, sync::Arc, thread};
+use tokio::net::TcpListener;
 
 mod client;
 mod client_handle;
@@ -18,11 +14,11 @@ pub mod handle;
 pub mod rate_limit;
 pub mod signal;
 
-pub fn main(config: Config) {
+pub async fn main(config: Config) {
     let config = Arc::new(config);
 
     info!("Connecting to database at \"{}\"", config.database.host);
-    let db = match DatabaseClient::new(&config) {
+    let db = match DatabaseClient::new(&config).await {
         Ok(db) => db,
         Err(why) => {
             error!("Failed to connect to database: {why}");
@@ -30,7 +26,7 @@ pub fn main(config: Config) {
         }
     };
 
-    let server = match TcpListener::bind(config.server_bind_addr()) {
+    let server = match TcpListener::bind(config.server_bind_addr()).await {
         Ok(socket) => socket,
         Err(why) => {
             error!("Failed to create socket: {why}");
@@ -38,7 +34,7 @@ pub fn main(config: Config) {
         }
     };
 
-    if let Err(why) = set_global_socket_params(&server, &config) {
+    if let Err(why) = set_global_socket_params(&server) {
         error!("Failed to set up socket parameters: {why}");
         exit(1);
     }
@@ -46,7 +42,7 @@ pub fn main(config: Config) {
     let (stop_sig, ping_sig) = setup_signals();
 
     info!("Server started on {}", config.server_bind_addr());
-    server_loop(&server, db, config, stop_sig, ping_sig);
+    server_loop(&server, db, config, stop_sig, ping_sig).await;
 }
 
 fn setup_signals() -> (SignalHandle, SignalHandle) {
@@ -65,25 +61,7 @@ fn setup_signals() -> (SignalHandle, SignalHandle) {
     (stop_sig, ping_sing)
 }
 
-pub fn set_global_socket_params<FD: AsRawFd>(socket: &FD, config: &Arc<Config>) -> io::Result<()> {
-    setsockopt(
-        socket,
-        SOL_SOCKET,
-        SO_SNDTIMEO, /* write timeout */
-        timeval {
-            tv_sec: config.limits.stall_time.as_secs().try_into().unwrap(),
-            tv_usec: 0,
-        },
-    )?;
-    setsockopt(
-        socket,
-        SOL_SOCKET,
-        SO_RCVTIMEO, /* read timeout */
-        timeval {
-            tv_sec: config.limits.stall_time.as_secs().try_into().unwrap(),
-            tv_usec: 0,
-        },
-    )?;
+pub fn set_global_socket_params<FD: AsRawFd>(socket: &FD) -> io::Result<()> {
     setsockopt(
         socket,
         SOL_SOCKET,

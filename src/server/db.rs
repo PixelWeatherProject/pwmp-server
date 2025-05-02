@@ -10,29 +10,22 @@ use sqlx::{
     Pool, Postgres,
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
 };
-use tokio::runtime::Runtime;
 
 pub type NodeId = i32;
 pub type MeasurementId = i32;
 pub type FirmwareBlob = Box<[u8]>;
 pub type UpdateStatId = i32;
 
-pub struct DatabaseClient {
-    rt: Runtime,
-    pool: Pool<Postgres>,
-}
+pub struct DatabaseClient(Pool<Postgres>);
 
 macro_rules! query {
-    ($runtime: expr, $pool: expr, $qfile: literal, $method: ident, $($bindings: tt)*) => {
-        $runtime.block_on(async {
-            sqlx::query_file!($qfile, $($bindings)*).$method(&$pool).await
-        })
+    ($pool: expr, $qfile: literal, $method: ident, $($bindings: tt)*) => {
+        sqlx::query_file!($qfile, $($bindings)*).$method(&$pool).await
     };
 }
 
 impl DatabaseClient {
-    pub fn new(config: &Config) -> Result<Self, Error> {
-        let rt = Runtime::new()?;
+    pub async fn new(config: &Config) -> Result<Self, Error> {
         let mut opts = PgConnectOptions::new()
             .host(&config.database.host)
             .port(config.database.port)
@@ -44,27 +37,18 @@ impl DatabaseClient {
             opts = opts.ssl_mode(PgSslMode::Require);
         }
 
-        let pool = rt.block_on(async {
-            PgPoolOptions::new()
-                .max_connections(3)
-                .connect_with(opts)
-                .await
-        })?;
+        let pool = PgPoolOptions::new()
+            .max_connections(3)
+            .connect_with(opts)
+            .await?;
 
-        Ok(Self { rt, pool })
+        Ok(Self(pool))
     }
 
-    pub fn authorize_device(&self, mac: &Mac) -> Result<Option<NodeId>, Error> {
+    pub async fn authorize_device(&self, mac: &Mac) -> Result<Option<NodeId>, Error> {
         let mac = mac.to_string();
 
-        let result = query!(
-            self.rt,
-            self.pool,
-            "queries/get_device_by_mac.sql",
-            fetch_one,
-            mac
-        );
-
+        let result = query!(self.0, "queries/get_device_by_mac.sql", fetch_one, mac);
         match result {
             Ok(res) => Ok(Some(res.id)),
             Err(sqlx::Error::RowNotFound) => Ok(None),
@@ -72,10 +56,9 @@ impl DatabaseClient {
         }
     }
 
-    pub fn create_notification(&self, node_id: NodeId, content: &str) -> Result<(), Error> {
+    pub async fn create_notification(&self, node_id: NodeId, content: &str) -> Result<(), Error> {
         query!(
-            self.rt,
-            self.pool,
+            self.0,
             "queries/create_notification.sql",
             execute,
             node_id,
@@ -85,10 +68,9 @@ impl DatabaseClient {
         Ok(())
     }
 
-    pub fn get_settings(&self, node_id: NodeId) -> Result<Option<NodeSettings>, Error> {
+    pub async fn get_settings(&self, node_id: NodeId) -> Result<Option<NodeSettings>, Error> {
         let result = query!(
-            self.rt,
-            self.pool,
+            self.0,
             "queries/get_device_settings.sql",
             fetch_one,
             node_id
@@ -107,7 +89,7 @@ impl DatabaseClient {
         }
     }
 
-    pub fn post_results(
+    pub async fn post_results(
         &self,
         node: NodeId,
         temp: Temperature,
@@ -120,8 +102,7 @@ impl DatabaseClient {
         };
 
         let result = query!(
-            self.rt,
-            self.pool,
+            self.0,
             "queries/post_results.sql",
             fetch_one,
             node,
@@ -133,7 +114,7 @@ impl DatabaseClient {
         Ok(result.id)
     }
 
-    pub fn post_stats(
+    pub async fn post_stats(
         &self,
         measurement: MeasurementId,
         battery: BatteryVoltage,
@@ -141,8 +122,7 @@ impl DatabaseClient {
         wifi_rssi: Rssi,
     ) -> Result<(), Error> {
         query!(
-            self.rt,
-            self.pool,
+            self.0,
             "queries/post_stats.sql",
             execute,
             measurement,
@@ -154,22 +134,20 @@ impl DatabaseClient {
         Ok(())
     }
 
-    pub fn run_migrations(&self) -> Result<(), Error> {
-        self.rt
-            .block_on(async { crate::MIGRATOR.run(&self.pool).await })?;
+    pub async fn run_migrations(&self) -> Result<(), Error> {
+        crate::MIGRATOR.run(&self.0).await?;
 
         Ok(())
     }
 
-    pub fn check_os_update(
+    pub async fn check_os_update(
         &self,
         node: NodeId,
         current_ver: Version,
     ) -> Result<Option<(Version, FirmwareBlob)>, Error> {
         let (version_major, version_middle, version_minor) = current_ver.to_signed_triple();
         let result = query!(
-            self.rt,
-            self.pool,
+            self.0,
             "queries/get_os_update.sql",
             fetch_one,
             node,
@@ -193,7 +171,7 @@ impl DatabaseClient {
         }
     }
 
-    pub fn send_os_update_stat(
+    pub async fn send_os_update_stat(
         &self,
         node_id: NodeId,
         old_ver: Version,
@@ -203,8 +181,7 @@ impl DatabaseClient {
         let (new_version_major, new_version_middle, new_version_minor) = new_ver.to_signed_triple();
 
         let result = query!(
-            self.rt,
-            self.pool,
+            self.0,
             "queries/send_os_update_event.sql",
             fetch_one,
             node_id,
@@ -219,12 +196,11 @@ impl DatabaseClient {
         Ok(result.id)
     }
 
-    pub fn mark_os_update_stat(&self, node_id: NodeId, success: bool) -> Result<(), Error> {
-        let last_update_id = self.get_last_os_update_stat(node_id)?;
+    pub async fn mark_os_update_stat(&self, node_id: NodeId, success: bool) -> Result<(), Error> {
+        let last_update_id = self.get_last_os_update_stat(node_id).await?;
 
         query!(
-            self.rt,
-            self.pool,
+            self.0,
             "queries/update_os_update_event.sql",
             execute,
             last_update_id,
@@ -234,48 +210,35 @@ impl DatabaseClient {
         Ok(())
     }
 
-    pub fn erase(&self, content_only: bool, keep_devices: bool) -> Result<(), Error> {
+    pub async fn erase(&self, content_only: bool, keep_devices: bool) -> Result<(), Error> {
         if content_only {
             if keep_devices {
                 query!(
-                    self.rt,
-                    self.pool,
+                    self.0,
                     "queries/erase_database_content_keep_devices_and_settings.sql",
                     execute,
                 )?;
             } else {
-                query!(
-                    self.rt,
-                    self.pool,
-                    "queries/erase_database_content.sql",
-                    execute,
-                )?;
+                query!(self.0, "queries/erase_database_content.sql", execute,)?;
             }
 
-            query!(
-                self.rt,
-                self.pool,
-                "queries/drop_migrations_table.sql",
-                execute,
-            )?;
+            query!(self.0, "queries/drop_migrations_table.sql", execute,)?;
         } else if keep_devices {
             query!(
-                self.rt,
-                self.pool,
+                self.0,
                 "queries/erase_database_content_keep_devices_and_settings.sql",
                 execute,
             )?;
         } else {
-            query!(self.rt, self.pool, "queries/erase_database.sql", execute,)?;
+            query!(self.0, "queries/erase_database.sql", execute,)?;
         }
 
         Ok(())
     }
 
-    fn get_last_os_update_stat(&self, node_id: NodeId) -> Result<UpdateStatId, Error> {
+    async fn get_last_os_update_stat(&self, node_id: NodeId) -> Result<UpdateStatId, Error> {
         Ok(query!(
-            self.rt,
-            self.pool,
+            self.0,
             "queries/get_last_update_event.sql",
             fetch_one,
             node_id

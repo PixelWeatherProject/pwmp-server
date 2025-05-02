@@ -6,9 +6,10 @@ use log::{debug, error, warn};
 use pwmp_client::pwmp_msg::{
     Message, MsgId, mac::Mac, request::Request, response::Response, version::Version,
 };
-use std::{
-    io::{Cursor, Read, Write},
-    net::{Shutdown, SocketAddr, TcpStream},
+use std::{io::Cursor, net::SocketAddr};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::TcpStream,
 };
 
 const RCV_BUFFER_SIZE: usize = 1024;
@@ -47,17 +48,17 @@ pub struct Authenticated {
 }
 
 impl<S> Client<S> {
-    pub fn shutdown(&mut self, reason: Option<Response>) -> Result<()> {
+    pub async fn shutdown(&mut self, reason: Option<Response>) -> Result<()> {
         debug!("{}: Attempting to shutdown socket", self.peer_addr_str());
 
         if let Some(res) = reason {
             debug!("{}: Sending reason code", self.peer_addr_str());
-            if let Err(why) = self.send_response(res) {
+            if let Err(why) = self.send_response(res).await {
                 warn!("{}: Failed to send: {why}", self.peer_addr_str());
             }
         }
 
-        self.stream.shutdown(Shutdown::Both)?;
+        self.stream.shutdown().await?;
         debug!("{}: Stream shut down", self.peer_addr_str());
         Ok(())
     }
@@ -71,21 +72,22 @@ impl<S> Client<S> {
             .map_or_else(|| "Unknown".to_string(), |addr| addr.to_string())
     }
 
-    pub fn send_response(&mut self, res: Response) -> Result<()> {
+    pub async fn send_response(&mut self, res: Response) -> Result<()> {
         debug!("{}: responding with {res:?}", self.peer_addr_str(),);
         self.last_id += 1;
         self.send_message(Message::new_response(res, self.last_id))
+            .await
     }
 
-    pub fn receive_request(&mut self) -> Result<Request> {
+    pub async fn receive_request(&mut self) -> Result<Request> {
         // Receive the message.
-        let message = self.receive_message()?;
+        let message = self.receive_message().await?;
 
         // Convert it to a request.
         message.take_request().ok_or(Error::NotRequest)
     }
 
-    fn send_message(&mut self, msg: Message) -> Result<()> {
+    async fn send_message(&mut self, msg: Message) -> Result<()> {
         // Serialize the message.
         let raw = msg.serialize();
 
@@ -93,23 +95,26 @@ impl<S> Client<S> {
         let length: MsgLength = raw.len().try_into().map_err(|_| Error::MessageTooLarge)?;
 
         // Send the length first as big/network endian.
-        self.stream.write_all(length.to_be_bytes().as_slice())?;
+        self.stream
+            .write_all(length.to_be_bytes().as_slice())
+            .await?;
 
         // Send the actual message next.
         // TODO: Endianness should be handled internally, but this should be checked!
-        self.stream.write_all(&raw)?;
+        self.stream.write_all(&raw).await?;
 
         // Flush the buffer.
-        self.stream.flush()?;
+        self.stream.flush().await?;
 
         // Done
         Ok(())
     }
 
-    fn receive_message(&mut self) -> Result<Message> {
+    async fn receive_message(&mut self) -> Result<Message> {
         // First read the message size.
         self.stream
-            .read_exact(&mut self.buf[..size_of::<MsgLength>()])?;
+            .read_exact(&mut self.buf[..size_of::<MsgLength>()])
+            .await?;
 
         // Parse the length
         let message_length: usize =
@@ -133,7 +138,9 @@ impl<S> Client<S> {
         }
 
         // Read the actual message.
-        self.stream.read_exact(&mut self.buf[..message_length])?;
+        self.stream
+            .read_exact(&mut self.buf[..message_length])
+            .await?;
 
         // Parse the message.
         let message =
@@ -168,13 +175,13 @@ impl Client<Unathenticated> {
         }
     }
 
-    pub fn authorize(mut self, db: &DatabaseClient) -> Result<Client<Authenticated>> {
+    pub async fn authorize(mut self, db: &DatabaseClient) -> Result<Client<Authenticated>> {
         debug!("{}: Awaiting greeting", self.peer_addr_str());
-        let mac = self.receive_handshake()?;
+        let mac = self.receive_handshake().await?;
 
         debug!("{}: Is {}?", self.peer_addr_str(), mac);
 
-        match db.authorize_device(&mac) {
+        match db.authorize_device(&mac).await {
             Ok(Some(id)) => {
                 let mut authorized_client = Client::<Authenticated>::new(self, id, mac);
                 debug!(
@@ -182,12 +189,12 @@ impl Client<Unathenticated> {
                     authorized_client.mac()
                 );
 
-                authorized_client.send_response(Response::Ok)?;
+                authorized_client.send_response(Response::Ok).await?;
                 Ok(authorized_client)
             }
             Ok(None) => {
                 warn!("Device {} is not authorized", self.peer_addr_str());
-                self.send_response(Response::Reject)?;
+                self.send_response(Response::Reject).await?;
                 Err(Error::Auth)
             }
             Err(why) => {
@@ -195,14 +202,14 @@ impl Client<Unathenticated> {
                     "Could not perform authentication of {}",
                     self.peer_addr_str()
                 );
-                self.send_response(Response::Reject)?;
+                self.send_response(Response::Reject).await?;
                 Err(why)
             }
         }
     }
 
-    fn receive_handshake(&mut self) -> Result<Mac> {
-        let req = self.receive_request()?;
+    async fn receive_handshake(&mut self) -> Result<Mac> {
+        let req = self.receive_request().await?;
         let Request::Handshake { mac } = req else {
             return Err(Error::NotHandshake);
         };

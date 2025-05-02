@@ -2,10 +2,11 @@ use super::{config::Config, db::DatabaseClient, rate_limit::RateLimiter, signal:
 use crate::server::client_handle::handle_client;
 use log::{debug, error, info, warn};
 use semaphore::Semaphore;
-use std::{io::ErrorKind, net::TcpListener, panic, sync::Arc, thread, time::Duration};
+use std::{panic, sync::Arc, time::Duration};
+use tokio::net::TcpListener;
 
 #[allow(clippy::needless_pass_by_value)]
-pub fn server_loop(
+pub async fn server_loop(
     server: &TcpListener,
     db: DatabaseClient,
     config: Arc<Config>,
@@ -30,9 +31,8 @@ pub fn server_loop(
             ping_sig.unset();
         }
 
-        let (client, peer_addr) = match server.accept() {
+        let (client, peer_addr) = match server.accept().await {
             Ok(res) => res,
-            Err(why) if why.kind() == ErrorKind::WouldBlock => continue,
             Err(why) => {
                 error!("Failed to accept connection: {why}");
                 continue;
@@ -53,7 +53,7 @@ pub fn server_loop(
         }
 
         debug!("{peer_addr:?}: Setting socket parameters");
-        if let Err(why) = super::set_global_socket_params(&client, &config) {
+        if let Err(why) = super::set_global_socket_params(&client) {
             error!("{peer_addr:?}: Failed to set socket parameters: {why}");
             continue;
         }
@@ -62,15 +62,15 @@ pub fn server_loop(
             let config = Arc::clone(&config);
             let db = shared_db.clone();
 
-            debug!("Starting client thread");
-            thread::spawn(move || {
+            debug!("Starting client task");
+            tokio::spawn(async move {
                 let _semguard = semguard;
 
                 debug!("Setting panic hook for thread");
                 set_panic_hook();
 
                 debug!("Starting client handle");
-                match handle_client(client, &db, config) {
+                match handle_client(client, &db, config).await {
                     Ok(()) => {
                         debug!("{peer_addr}: Handled successfully");
                     }

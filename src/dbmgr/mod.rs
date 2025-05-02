@@ -6,15 +6,15 @@ use color_print::cprintln;
 use log::{debug, error, info};
 use std::{io::stdin, process::exit};
 
-pub fn main(cmd: DatabaseCommand, config: &Config) {
+pub async fn main(cmd: DatabaseCommand, config: &Config) {
     match cmd {
-        DatabaseCommand::Test => match DatabaseClient::new(config) {
+        DatabaseCommand::Test => match DatabaseClient::new(config).await {
             Ok(_) => info!("Connection successful"),
             Err(why) => error!("Failed to connect: {why}"),
         },
         DatabaseCommand::Init => {
             debug!("Initializing database pool");
-            let client = match DatabaseClient::new(config) {
+            let client = match DatabaseClient::new(config).await {
                 Ok(conn) => conn,
                 Err(why) => {
                     error!("Failed to connect: {why}");
@@ -23,7 +23,7 @@ pub fn main(cmd: DatabaseCommand, config: &Config) {
             };
 
             info!("Executing migrations");
-            match client.run_migrations() {
+            match client.run_migrations().await {
                 Ok(()) => info!("Migrations executed successfully"),
                 Err(why) => error!("Failed to execute migrations: {why}"),
             }
@@ -32,7 +32,7 @@ pub fn main(cmd: DatabaseCommand, config: &Config) {
             content_only,
             keep_devices,
         } => {
-            let client = match DatabaseClient::new(config) {
+            let client = match DatabaseClient::new(config).await {
                 Ok(conn) => conn,
                 Err(why) => {
                     error!("Failed to connect: {why}");
@@ -43,7 +43,7 @@ pub fn main(cmd: DatabaseCommand, config: &Config) {
             info!("Connected to the database");
             confirm_erase(&config.database.name, &config.database.host);
 
-            match client.erase(content_only, keep_devices) {
+            match client.erase(content_only, keep_devices).await {
                 Ok(()) => info!("Success!"),
                 Err(why) => error!("Failed to erase database: {why}"),
             }
