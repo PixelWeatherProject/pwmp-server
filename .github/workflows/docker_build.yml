@@ -1,0 +1,20 @@
+name: Release tagged versions
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+
+env:
+  SQLX_OFFLINE: true
+
+jobs:
+  build_docker_image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build and push the Docker image
+        run: |
+          docker login --username br0kenpixel --password ${{ secrets.GH_PAT }} ghcr.io
+          docker build . --tag ghcr.io/pixelweatherproject/pwmp-server:latest
+          docker push ghcr.io/pixelweatherproject/pwmp-server:latest
