@@ -81,9 +81,6 @@ fn handle_new_client(
     tokio::spawn(async move {
         let _semguard = semguard;
 
-        debug!("Setting panic hook for thread");
-        set_panic_hook();
-
         debug!("Starting client handle");
         match handle_client(client, peer_addr, &shared_db, config).await {
             Ok(()) => {
@@ -112,10 +109,4 @@ fn display_rt_metrics() {
     );
     info!("Tasks alive: {}", metrics.num_alive_tasks());
     info!("Workers: {}", metrics.num_workers());
-}
-
-fn set_panic_hook() {
-    panic::set_hook(Box::new(move |info| {
-        warn!("A client thread has paniced: {info:?}");
-    }));
 }
