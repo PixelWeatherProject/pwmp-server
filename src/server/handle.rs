@@ -5,6 +5,7 @@ use semaphore::Semaphore;
 use std::{net::SocketAddr, panic, sync::Arc, time::Duration};
 use tokio::{
     net::{TcpListener, TcpStream},
+    runtime::Handle,
     select,
     signal::unix::Signal,
 };
@@ -43,6 +44,7 @@ pub async fn server_loop(
 
             _ = ping_sig.recv() => {
                 info!("Ping requested through SIGUSR1");
+                display_rt_metrics();
             }
         }
     }
@@ -92,6 +94,24 @@ fn handle_new_client(
             }
         }
     });
+}
+
+fn display_rt_metrics() {
+    let handle = match Handle::try_current() {
+        Ok(h) => h,
+        Err(_) => {
+            error!("Runtime metrics are not available");
+            return;
+        }
+    };
+    let metrics = handle.metrics();
+
+    info!(
+        "Pending tasks in the runtime's global queue: {}",
+        metrics.global_queue_depth()
+    );
+    info!("Tasks alive: {}", metrics.num_alive_tasks());
+    info!("Workers: {}", metrics.num_workers());
 }
 
 fn set_panic_hook() {
