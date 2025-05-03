@@ -83,7 +83,7 @@ fn handle_new_client(
         set_panic_hook();
 
         debug!("Starting client handle");
-        match handle_client(client, &shared_db, config).await {
+        match handle_client(client, peer_addr, &shared_db, config).await {
             Ok(()) => {
                 debug!("{peer_addr}: Handled successfully");
             }

@@ -7,16 +7,17 @@ use super::{
 use crate::error::Error;
 use log::{debug, error, warn};
 use pwmp_client::pwmp_msg::{request::Request, response::Response};
-use std::{io::Read, sync::Arc, time::Duration};
+use std::{io::Read, net::SocketAddr, sync::Arc, time::Duration};
 use tokio::{net::TcpStream, time::timeout};
 
 #[allow(clippy::needless_pass_by_value)]
 pub async fn handle_client(
     client: TcpStream,
+    peer_addr: SocketAddr,
     db: &DatabaseClient,
     config: Arc<Config>,
 ) -> Result<(), Error> {
-    let client = Client::new(client);
+    let client = Client::new(client, peer_addr);
     let mut rate_limiter = RateLimiter::new(
         Duration::from_secs(config.rate_limits.time_frame),
         config.rate_limits.max_requests,

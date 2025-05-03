@@ -23,6 +23,7 @@ pub struct Client<S> {
     id_cache: CircularQueue<MsgId>,
     last_id: MsgId,
     state: S,
+    peer_addr: Box<str>,
 }
 
 #[derive(Debug)]
@@ -49,32 +50,22 @@ pub struct Authenticated {
 
 impl<S> Client<S> {
     pub async fn shutdown(&mut self, reason: Option<Response>) -> Result<()> {
-        let peer_addr = self.peer_addr_str();
-        debug!("{peer_addr}: Attempting to shutdown socket");
+        debug!("{}: Attempting to shutdown socket", self.peer_addr);
 
         if let Some(res) = reason {
-            debug!("{peer_addr}: Sending reason code");
+            debug!("{}: Sending reason code", self.peer_addr);
             if let Err(why) = self.send_response(res).await {
-                warn!("{peer_addr}: Failed to send: {why}");
+                warn!("{}: Failed to send: {why}", self.peer_addr);
             }
         }
 
         self.stream.shutdown().await?;
-        debug!("{peer_addr}: Stream shut down");
+        debug!("{}: Stream shut down", self.peer_addr);
         Ok(())
     }
 
-    fn peer_addr(&self) -> Option<SocketAddr> {
-        self.stream.peer_addr().ok()
-    }
-
-    fn peer_addr_str(&self) -> String {
-        self.peer_addr()
-            .map_or_else(|| "Unknown".to_string(), |addr| addr.to_string())
-    }
-
     pub async fn send_response(&mut self, res: Response) -> Result<()> {
-        debug!("{}: responding with {res:?}", self.peer_addr_str(),);
+        debug!("{}: responding with {res:?}", self.peer_addr);
         self.last_id += 1;
         self.send_message(Message::new_response(res, self.last_id))
             .await
@@ -132,7 +123,7 @@ impl<S> Client<S> {
         if self.buf.len() < message_length {
             error!(
                 "{}: Received message length is {message_length} bytes, but the buffer is only {} bytes",
-                self.peer_addr_str(),
+                self.peer_addr,
                 self.buf.len()
             );
             return Err(Error::InvalidBuffer);
@@ -166,21 +157,22 @@ impl<S> Client<S> {
 }
 
 impl Client<Unathenticated> {
-    pub fn new(socket: TcpStream) -> Self {
+    pub fn new(socket: TcpStream, peer_addr: SocketAddr) -> Self {
         Self {
             stream: socket,
             buf: [0; RCV_BUFFER_SIZE],
             id_cache: CircularQueue::with_capacity(ID_CACHE_SIZE),
             last_id: 1,
             state: Unathenticated,
+            peer_addr: peer_addr.to_string().into_boxed_str(),
         }
     }
 
     pub async fn authorize(mut self, db: &DatabaseClient) -> Result<Client<Authenticated>> {
-        debug!("{}: Awaiting greeting", self.peer_addr_str());
+        debug!("{}: Awaiting greeting", self.peer_addr);
         let mac = self.receive_handshake().await?;
 
-        debug!("{}: Is {}?", self.peer_addr_str(), mac);
+        debug!("{}: Is {}?", self.peer_addr, mac);
 
         match db.authorize_device(&mac).await {
             Ok(Some(id)) => {
@@ -194,15 +186,12 @@ impl Client<Unathenticated> {
                 Ok(authorized_client)
             }
             Ok(None) => {
-                warn!("Device {} is not authorized", self.peer_addr_str());
+                warn!("Device {} is not authorized", self.peer_addr);
                 self.send_response(Response::Reject).await?;
                 Err(Error::Auth)
             }
             Err(why) => {
-                error!(
-                    "Could not perform authentication of {}",
-                    self.peer_addr_str()
-                );
+                error!("Could not perform authentication of {}", self.peer_addr);
                 self.send_response(Response::Reject).await?;
                 Err(why)
             }
@@ -232,6 +221,7 @@ impl Client<Authenticated> {
                 last_submit: None,
                 update_state: UpdateState::Unchecked,
             },
+            peer_addr: client.peer_addr,
         }
     }
 
