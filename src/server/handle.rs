@@ -94,12 +94,9 @@ fn handle_new_client(
 }
 
 fn display_rt_metrics() {
-    let handle = match Handle::try_current() {
-        Ok(h) => h,
-        Err(_) => {
-            error!("Runtime metrics are not available");
-            return;
-        }
+    let Ok(handle) = Handle::try_current() else {
+        error!("Runtime metrics are not available");
+        return;
     };
     let metrics = handle.metrics();
 
