@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n    name\nFROM\n    pg_timezone_names;",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "name",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "de42a26e34cf8972379018b560c8e5fc7cf14fce0b0d28bc3b04c80a5712a3b1"
+}
