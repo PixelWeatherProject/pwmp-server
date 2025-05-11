@@ -1,2 +1,0 @@
-SET
-    TIME ZONE $1;
