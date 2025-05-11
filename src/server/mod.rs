@@ -32,7 +32,7 @@ pub async fn main(config: Config) {
         .database
         .timezone
         .clone()
-        .or(iana_time_zone::get_timezone().ok())
+        .or_else(|| iana_time_zone::get_timezone().ok())
     {
         Some(tz) => match db.setup_timezone(&tz).await {
             Ok(()) => info!("Timezone updated to \"{tz}\" successfully"),
