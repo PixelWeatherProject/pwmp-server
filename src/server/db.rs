@@ -46,9 +46,8 @@ impl DatabaseClient {
         Ok(Self(pool))
     }
 
-    pub async fn setup_timezone(&self, tz: String) -> Result<(), Error> {
-        let supported_tz = self.get_supported_time_zones().await?;
-        if !supported_tz.contains(&tz) {
+    pub async fn setup_timezone(&self, tz: &str) -> Result<(), Error> {
+        if !self.validate_timezone(tz).await? {
             error!("Timezone \"{tz}\" is not supported by database, leaving defaults");
             return Ok(());
         }
@@ -268,5 +267,11 @@ impl DatabaseClient {
             .collect();
 
         Ok(names)
+    }
+
+    async fn validate_timezone<S: PartialEq<String>>(&self, tz: S) -> Result<bool, Error> {
+        let supported = self.get_supported_time_zones().await?;
+
+        Ok(supported.iter().any(|candidate| tz.eq(candidate)))
     }
 }
