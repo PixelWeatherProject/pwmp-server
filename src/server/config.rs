@@ -32,6 +32,7 @@ pub struct DatabaseConfig {
     pub password: Box<str>,
     pub name: Box<str>,
     pub ssl: bool,
+    pub timezone: Option<String>,
 }
 
 #[serde_as]
@@ -78,6 +79,7 @@ impl Default for DatabaseConfig {
             password: "root".into(),
             name: "pixelweather".into(),
             ssl: false,
+            timezone: None,
         }
     }
 }

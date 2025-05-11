@@ -1,5 +1,6 @@
 use super::config::Config;
 use crate::error::Error;
+use log::error;
 use pwmp_client::pwmp_msg::{
     aliases::{AirPressure, BatteryVoltage, Humidity, Rssi, Temperature},
     mac::Mac,
@@ -43,6 +44,20 @@ impl DatabaseClient {
             .await?;
 
         Ok(Self(pool))
+    }
+
+    pub async fn setup_timezone(&self, tz: String) -> Result<(), Error> {
+        let supported_tz = self.get_supported_time_zones().await?;
+        if !supported_tz.contains(&tz) {
+            error!("Timezone \"{tz}\" is not supported by database, leaving defaults");
+            return Ok(());
+        }
+
+        // This query needs to be dynamically generated.
+        let sql = format!("SET TIME ZONE \"{tz}\"");
+        sqlx::query(&sql).execute(&self.0).await?;
+
+        Ok(())
     }
 
     pub async fn authorize_device(&self, mac: &Mac) -> Result<Option<NodeId>, Error> {
@@ -198,7 +213,6 @@ impl DatabaseClient {
 
     pub async fn mark_os_update_stat(&self, node_id: NodeId, success: bool) -> Result<(), Error> {
         let last_update_id = self.get_last_os_update_stat(node_id).await?;
-
         query!(
             self.0,
             "queries/update_os_update_event.sql",
@@ -244,5 +258,15 @@ impl DatabaseClient {
             node_id
         )?
         .id)
+    }
+
+    async fn get_supported_time_zones(&self) -> Result<Vec<String>, Error> {
+        let results = query!(self.0, "queries/get_tz_names.sql", fetch_all,)?;
+        let names: Vec<String> = results
+            .into_iter()
+            .filter_map(|record| record.name)
+            .collect();
+
+        Ok(names)
     }
 }

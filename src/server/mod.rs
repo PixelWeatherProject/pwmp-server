@@ -1,7 +1,7 @@
 use crate::server::{db::DatabaseClient, handle::server_loop};
 use config::Config;
 use libc::{IPPROTO_TCP, SO_KEEPALIVE, SO_LINGER, SOL_SOCKET, TCP_NODELAY, linger, socklen_t};
-use log::{error, info};
+use log::{debug, error, info, warn};
 use std::{ffi::c_int, io, mem, os::fd::AsRawFd, process::exit, sync::Arc};
 use tokio::{
     net::TcpListener,
@@ -26,6 +26,24 @@ pub async fn main(config: Config) {
             exit(1);
         }
     };
+
+    debug!("Setting timezone");
+    match config
+        .database
+        .timezone
+        .clone()
+        .or(localzone::get_local_zone())
+    {
+        Some(tz) => match db.setup_timezone(tz).await {
+            Ok(()) => info!("Timezone updated successfully"),
+            Err(why) => {
+                error!("Failed to set time zone: {why}");
+            }
+        },
+        None => {
+            warn!("Cannot determine system time zone, skipping");
+        }
+    }
 
     let server = match TcpListener::bind(config.server_bind_addr()).await {
         Ok(socket) => socket,
