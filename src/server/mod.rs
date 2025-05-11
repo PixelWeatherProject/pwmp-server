@@ -14,7 +14,6 @@ pub mod config;
 pub mod db;
 pub mod handle;
 pub mod rate_limit;
-pub mod tz;
 
 pub async fn main(config: Config) {
     let config = Arc::new(config);
@@ -33,7 +32,7 @@ pub async fn main(config: Config) {
         .database
         .timezone
         .clone()
-        .or(tz::get_system_timezone())
+        .or(iana_time_zone::get_timezone().ok())
     {
         Some(tz) => match db.setup_timezone(&tz).await {
             Ok(()) => info!("Timezone updated to \"{tz}\" successfully"),
