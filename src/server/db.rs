@@ -1,6 +1,5 @@
 use super::config::Config;
 use crate::error::Error;
-use log::error;
 use pwmp_client::pwmp_msg::{
     aliases::{AirPressure, BatteryVoltage, Humidity, Rssi, Temperature},
     mac::Mac,
@@ -48,8 +47,7 @@ impl DatabaseClient {
 
     pub async fn setup_timezone(&self, tz: &str) -> Result<(), Error> {
         if !self.validate_timezone(tz).await? {
-            error!("Timezone \"{tz}\" is not supported by database, leaving defaults");
-            return Ok(());
+            return Err(Error::InvalidTimeZone(tz.into()));
         }
 
         // This query needs to be dynamically generated.

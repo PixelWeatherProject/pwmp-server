@@ -57,4 +57,8 @@ pub enum Error {
     /// Invalid message length.
     #[error("Message is too large to send")]
     MessageTooLarge,
+
+    /// Invalid IANA time zone identifier
+    #[error("Invalid or unsupported time zone: '{0}'")]
+    InvalidTimeZone(String),
 }

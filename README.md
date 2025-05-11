@@ -22,6 +22,7 @@ database:
   password: "root"
   name: "pixelweather"
   ssl: false
+  timezone: null
 
 limits:
   # Maximum number of devices that can be connected at the same time.

@@ -38,6 +38,7 @@ pub async fn main(config: Config) {
             Ok(()) => info!("Timezone updated to \"{tz}\" successfully"),
             Err(why) => {
                 error!("Failed to set time zone: {why}");
+                warn!("Keeping timezone unset, timestamps may have unexpected values");
             }
         },
         None => {
