@@ -103,7 +103,7 @@ async fn handle_request(
             }
 
             debug!(
-                "{}: {temperature}C, {humidity}%, {air_pressure:?}hPa",
+                "{}: {temperature:.02}°C, {humidity}%, {air_pressure:?}hPa",
                 client.id()
             );
             client.set_last_submit(
