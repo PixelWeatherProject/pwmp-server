@@ -28,12 +28,14 @@ pub async fn handle_client(
         let maybe_request = timeout(config.limits.stall_time, client.receive_request()).await;
 
         let request = match maybe_request {
-            // Check if we timed out
-            Ok(result) => match result {
-                Ok(req) => req,
-                Err(other) => return Err(other),
-            },
-            Err(_) => {
+            // Successfully received and parsed a request
+            Ok(Ok(req)) => req,
+
+            // An error occured while receiving a request
+            Ok(Err(why)) => return Err(why),
+
+            // Timed out
+            Err(..) => {
                 error!("{}: Stalled for too long, kicking", client.id());
                 let _ = client.shutdown(Some(Response::Stalling)).await;
                 return Err(Error::StallTimeExceeded);
