@@ -16,7 +16,7 @@ codegen-units = 1
 strip = true
 
 [dependencies]
-pwmp-client = { git = "https://github.com/PixelWeatherProject/pwmp-client.git", tag = "v2.1.6" }
+pwmp-client = { git = "https://github.com/PixelWeatherProject/pwmp-client.git", tag = "v2.1.7" }
 sqlx = { version = "0.8.3", default-features = false, features = [
     "postgres",
     "runtime-tokio",
