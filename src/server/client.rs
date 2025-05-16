@@ -49,21 +49,6 @@ pub struct Authenticated {
 }
 
 impl<S> Client<S> {
-    pub async fn shutdown(&mut self, reason: Option<Response>) -> Result<()> {
-        debug!("{}: Attempting to shutdown socket", self.peer_addr);
-
-        if let Some(res) = reason {
-            debug!("{}: Sending reason code", self.peer_addr);
-            if let Err(why) = self.send_response(res).await {
-                warn!("{}: Failed to send: {why}", self.peer_addr);
-            }
-        }
-
-        self.stream.shutdown().await?;
-        debug!("{}: Stream shut down", self.peer_addr);
-        Ok(())
-    }
-
     pub async fn send_response(&mut self, res: Response) -> Result<()> {
         debug!("{}: responding with {res:?}", self.peer_addr);
         self.last_id += 1;
@@ -277,5 +262,22 @@ impl Client<Authenticated> {
             UpdateState::Available { new, .. } => Some(new),
             _ => None,
         }
+    }
+
+    // Note: This method could be implemented for Client<S>, but that would make it impossible
+    //       to print the Node ID. This way it's possible and makes debugging slightly easier.
+    pub async fn shutdown(&mut self, reason: Option<Response>) -> Result<()> {
+        debug!("{}: Attempting to shutdown socket", self.id());
+
+        if let Some(res) = reason {
+            debug!("{}: Sending reason code", self.peer_addr);
+            if let Err(why) = self.send_response(res).await {
+                warn!("{}: Failed to send: {why}", self.peer_addr);
+            }
+        }
+
+        self.stream.shutdown().await?;
+        debug!("{}: Stream shut down", self.peer_addr);
+        Ok(())
     }
 }
