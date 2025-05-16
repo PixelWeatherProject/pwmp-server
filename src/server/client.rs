@@ -270,14 +270,14 @@ impl Client<Authenticated> {
         debug!("{}: Attempting to shutdown socket", self.id());
 
         if let Some(res) = reason {
-            debug!("{}: Sending reason code", self.peer_addr);
+            debug!("{}: Sending reason code", self.id());
             if let Err(why) = self.send_response(res).await {
-                warn!("{}: Failed to send: {why}", self.peer_addr);
+                warn!("{}: Failed to send: {why}", self.id());
             }
         }
 
         self.stream.shutdown().await?;
-        debug!("{}: Stream shut down", self.peer_addr);
+        debug!("{}: Stream shut down", self.id());
         Ok(())
     }
 }
