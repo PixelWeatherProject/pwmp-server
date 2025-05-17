@@ -19,7 +19,7 @@ pub static MIGRATOR: Migrator = sqlx::migrate!();
 async fn main() -> Result<(), error::Error> {
     let args = cli::Cli::parse();
 
-    logging::setup()?;
+    logging::setup(args.debug)?;
 
     info!("PixelWeather Server v{}", env!("CARGO_PKG_VERSION"));
     debug!("Arguments: {args:?}");

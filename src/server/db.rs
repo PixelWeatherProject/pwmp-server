@@ -10,6 +10,7 @@ use sqlx::{
     Pool, Postgres,
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
 };
+use std::fmt::Debug;
 
 pub type NodeId = i32;
 pub type MeasurementId = i32;
@@ -25,6 +26,7 @@ macro_rules! query {
 }
 
 impl DatabaseClient {
+    #[tracing::instrument(name = "DatabaseClient::init()", level = "debug", err, skip_all)]
     pub async fn new(config: &Config) -> Result<Self, Error> {
         let mut opts = PgConnectOptions::new()
             .host(&config.database.host)
@@ -45,6 +47,12 @@ impl DatabaseClient {
         Ok(Self(pool))
     }
 
+    #[tracing::instrument(
+        name = "DatabaseClient::setup_timezone()",
+        level = "debug",
+        skip(self),
+        err
+    )]
     pub async fn setup_timezone(&self, tz: &str) -> Result<(), Error> {
         if !self.validate_timezone(tz).await? {
             return Err(Error::InvalidTimeZone(tz.into()));
@@ -57,6 +65,13 @@ impl DatabaseClient {
         Ok(())
     }
 
+    #[tracing::instrument(
+        name = "DatabaseClient::authorize_device()",
+        level = "debug",
+        skip(self),
+        err,
+        ret
+    )]
     pub async fn authorize_device(&self, mac: &Mac) -> Result<Option<NodeId>, Error> {
         let mac = mac.to_string();
 
@@ -68,6 +83,12 @@ impl DatabaseClient {
         }
     }
 
+    #[tracing::instrument(
+        name = "DatabaseClient::create_notification()",
+        level = "debug",
+        skip(self),
+        err
+    )]
     pub async fn create_notification(&self, node_id: NodeId, content: &str) -> Result<(), Error> {
         query!(
             self.0,
@@ -80,6 +101,13 @@ impl DatabaseClient {
         Ok(())
     }
 
+    #[tracing::instrument(
+        name = "DatabaseClient::get_settings()",
+        level = "debug",
+        skip(self),
+        err,
+        ret
+    )]
     pub async fn get_settings(&self, node_id: NodeId) -> Result<Option<NodeSettings>, Error> {
         let result = query!(
             self.0,
@@ -101,6 +129,13 @@ impl DatabaseClient {
         }
     }
 
+    #[tracing::instrument(
+        name = "DatabaseClient::post_results()",
+        level = "debug",
+        skip(self),
+        err,
+        ret
+    )]
     pub async fn post_results(
         &self,
         node: NodeId,
@@ -126,6 +161,12 @@ impl DatabaseClient {
         Ok(result.id)
     }
 
+    #[tracing::instrument(
+        name = "DatabaseClient::post_stats()",
+        level = "debug",
+        skip(self),
+        err
+    )]
     pub async fn post_stats(
         &self,
         measurement: MeasurementId,
@@ -146,12 +187,24 @@ impl DatabaseClient {
         Ok(())
     }
 
+    #[tracing::instrument(
+        name = "DatabaseClient::run_migrations()",
+        level = "debug",
+        skip(self),
+        err
+    )]
     pub async fn run_migrations(&self) -> Result<(), Error> {
         crate::MIGRATOR.run(&self.0).await?;
 
         Ok(())
     }
 
+    #[tracing::instrument(
+        name = "DatabaseClient::check_os_update()",
+        level = "debug",
+        skip(self),
+        err
+    )]
     pub async fn check_os_update(
         &self,
         node: NodeId,
@@ -183,6 +236,13 @@ impl DatabaseClient {
         }
     }
 
+    #[tracing::instrument(
+        name = "DatabaseClient::send_os_update_stat()",
+        level = "debug",
+        skip(self),
+        err,
+        ret
+    )]
     pub async fn send_os_update_stat(
         &self,
         node_id: NodeId,
@@ -208,6 +268,12 @@ impl DatabaseClient {
         Ok(result.id)
     }
 
+    #[tracing::instrument(
+        name = "DatabaseClient::mark_os_update_stat()",
+        level = "debug",
+        skip(self),
+        err
+    )]
     pub async fn mark_os_update_stat(&self, node_id: NodeId, success: bool) -> Result<(), Error> {
         let last_update_id = self.get_last_os_update_stat(node_id).await?;
         query!(
@@ -221,6 +287,7 @@ impl DatabaseClient {
         Ok(())
     }
 
+    #[tracing::instrument(name = "DatabaseClient::erase()", level = "debug", skip(self), err)]
     pub async fn erase(&self, content_only: bool, keep_devices: bool) -> Result<(), Error> {
         if content_only {
             if keep_devices {
@@ -247,6 +314,13 @@ impl DatabaseClient {
         Ok(())
     }
 
+    #[tracing::instrument(
+        name = "DatabaseClient::get_last_os_update_stat()",
+        level = "debug",
+        skip(self),
+        err,
+        ret
+    )]
     async fn get_last_os_update_stat(&self, node_id: NodeId) -> Result<UpdateStatId, Error> {
         Ok(query!(
             self.0,
@@ -257,6 +331,12 @@ impl DatabaseClient {
         .id)
     }
 
+    #[tracing::instrument(
+        name = "DatabaseClient::get_supported_time_zones()",
+        level = "debug",
+        skip(self),
+        err
+    )]
     async fn get_supported_time_zones(&self) -> Result<Vec<String>, Error> {
         let results = query!(self.0, "queries/get_tz_names.sql", fetch_all,)?;
         let names: Vec<String> = results
@@ -267,7 +347,14 @@ impl DatabaseClient {
         Ok(names)
     }
 
-    async fn validate_timezone<S: PartialEq<String>>(&self, tz: S) -> Result<bool, Error> {
+    #[tracing::instrument(
+        name = "DatabaseClient::validate_timezone()",
+        level = "debug",
+        skip(self, tz),
+        err,
+        ret /* this will print `tz` too */
+    )]
+    async fn validate_timezone<S: PartialEq<String> + Debug>(&self, tz: S) -> Result<bool, Error> {
         let supported = self.get_supported_time_zones().await?;
 
         Ok(supported.iter().any(|candidate| tz.eq(candidate)))

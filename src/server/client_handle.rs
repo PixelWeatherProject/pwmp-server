@@ -5,10 +5,10 @@ use super::{
     rate_limit::RateLimiter,
 };
 use crate::error::Error;
-use tracing::{debug, error, warn};
 use pwmp_client::pwmp_msg::{request::Request, response::Response};
 use std::{io::Read, net::SocketAddr, sync::Arc, time::Duration};
 use tokio::{net::TcpStream, time::timeout};
+use tracing::{debug, error, warn};
 
 #[allow(clippy::needless_pass_by_value)]
 pub async fn handle_client(
@@ -78,6 +78,7 @@ pub async fn handle_client(
     Ok(())
 }
 
+#[tracing::instrument(name = "handle_request()", skip_all, level = "debug", err, ret)]
 async fn handle_request(
     req: Request,
     client: &mut Client<Authenticated>,

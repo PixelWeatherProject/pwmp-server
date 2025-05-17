@@ -64,6 +64,7 @@ impl<S> Client<S> {
         message.take_request().ok_or(Error::NotRequest)
     }
 
+    #[tracing::instrument(name = "Client::send_message()", skip(self), level = "debug")]
     async fn send_message(&mut self, msg: Message) -> Result<()> {
         // Serialize the message.
         let raw = msg.serialize();
@@ -87,6 +88,13 @@ impl<S> Client<S> {
         Ok(())
     }
 
+    #[tracing::instrument(
+        name = "Client::receive_message()",
+        skip(self),
+        level = "debug",
+        err,
+        ret
+    )]
     async fn receive_message(&mut self) -> Result<Message> {
         // First read the message size.
         self.stream
@@ -183,6 +191,13 @@ impl Client<Unathenticated> {
         }
     }
 
+    #[tracing::instrument(
+        name = "Client<Unathenticated>::receive_handshake()",
+        skip(self),
+        level = "debug",
+        err,
+        ret
+    )]
     async fn receive_handshake(&mut self) -> Result<Mac> {
         let req = self.receive_request().await?;
         let Request::Handshake { mac } = req else {
@@ -230,6 +245,11 @@ impl Client<Authenticated> {
         self.state.update_state = UpdateState::UpToDate;
     }
 
+    #[tracing::instrument(
+        name = "Client<Authenticated>::store_update_check_result()",
+        skip(self, blob),
+        level = "debug"
+    )]
     pub fn store_update_check_result(
         &mut self,
         current_version: Version,

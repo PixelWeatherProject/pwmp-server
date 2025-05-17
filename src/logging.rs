@@ -1,6 +1,10 @@
 use crate::error::Error;
 use std::time::SystemTime;
-use tracing_subscriber::fmt::{format::Writer, time::FormatTime};
+use tracing::level_filters::LevelFilter;
+use tracing_subscriber::fmt::{
+    format::{FmtSpan, Writer},
+    time::FormatTime,
+};
 
 struct DateTimeFormatter;
 
@@ -12,11 +16,19 @@ impl FormatTime for DateTimeFormatter {
     }
 }
 
-pub fn setup() -> Result<(), Error> {
+pub fn setup(debug: bool) -> Result<(), Error> {
+    let level = if cfg!(debug_assertions) | debug {
+        LevelFilter::DEBUG
+    } else {
+        LevelFilter::INFO
+    };
+
     let subscriber = tracing_subscriber::fmt()
         .compact()
         .with_timer(DateTimeFormatter)
         .with_target(false)
+        .with_max_level(level)
+        .with_span_events(FmtSpan::CLOSE)
         .finish();
     tracing::subscriber::set_global_default(subscriber)?;
 
