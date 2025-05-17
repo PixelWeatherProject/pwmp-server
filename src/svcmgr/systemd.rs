@@ -1,5 +1,5 @@
 use super::traits::ServiceManager;
-use log::{debug, error, info};
+use tracing::{debug, error, info};
 use std::{
     env::current_exe,
     fs,

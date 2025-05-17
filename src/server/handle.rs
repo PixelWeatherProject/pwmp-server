@@ -1,6 +1,5 @@
 use super::{config::Config, db::DatabaseClient, rate_limit::RateLimiter};
 use crate::server::client_handle::handle_client;
-use log::{debug, error, info, warn};
 use semaphore::Semaphore;
 use std::{net::SocketAddr, panic, sync::Arc, time::Duration};
 use tokio::{
@@ -9,6 +8,7 @@ use tokio::{
     select,
     signal::unix::Signal,
 };
+use tracing::{debug, error, info, warn};
 
 #[allow(clippy::needless_pass_by_value)]
 pub async fn server_loop(

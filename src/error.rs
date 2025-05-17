@@ -1,4 +1,5 @@
 use std::{io, num::TryFromIntError};
+use tracing::subscriber::SetGlobalDefaultError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -24,7 +25,7 @@ pub enum Error {
 
     /// Failed to set up the logger.
     #[error("Failed to set global logger")]
-    LogInit(#[from] log::SetLoggerError),
+    LogInit(#[from] SetGlobalDefaultError),
 
     /// Integer conversion error.
     #[error("Integer conversion error: {0}")]

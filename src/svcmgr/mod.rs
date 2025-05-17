@@ -1,6 +1,6 @@
 use self::traits::ServiceManager;
 use crate::cli::ServiceCommand;
-use log::{error, info, warn};
+use tracing::{error, info, warn};
 use std::{io, process::exit};
 
 mod openrc;

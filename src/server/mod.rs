@@ -1,12 +1,12 @@
 use crate::server::{db::DatabaseClient, handle::server_loop};
 use config::Config;
 use libc::{IPPROTO_TCP, SO_KEEPALIVE, SO_LINGER, SOL_SOCKET, TCP_NODELAY, linger, socklen_t};
-use log::{debug, error, info, warn};
 use std::{ffi::c_int, io, mem, os::fd::AsRawFd, process::exit, sync::Arc};
 use tokio::{
     net::TcpListener,
     signal::unix::{Signal, SignalKind, signal},
 };
+use tracing::{debug, error, info, warn};
 
 mod client;
 mod client_handle;

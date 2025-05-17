@@ -3,7 +3,7 @@ use crate::{
     server::{config::Config, db::DatabaseClient},
 };
 use color_print::cprintln;
-use log::{debug, error, info};
+use tracing::{debug, error, info};
 use std::{io::stdin, process::exit};
 
 pub async fn main(cmd: DatabaseCommand, config: &Config) {

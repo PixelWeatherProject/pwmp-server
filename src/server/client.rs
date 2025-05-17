@@ -2,7 +2,6 @@ use super::db::{DatabaseClient, FirmwareBlob, MeasurementId, NodeId};
 use crate::error::Error;
 use arrayref::array_ref;
 use circular_queue::CircularQueue;
-use log::{debug, error, warn};
 use pwmp_client::pwmp_msg::{
     Message, MsgId, mac::Mac, request::Request, response::Response, version::Version,
 };
@@ -11,6 +10,7 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
 };
+use tracing::{debug, error, warn};
 
 const RCV_BUFFER_SIZE: usize = 1024;
 const ID_CACHE_SIZE: usize = 32;

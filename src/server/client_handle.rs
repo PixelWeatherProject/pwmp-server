@@ -5,7 +5,7 @@ use super::{
     rate_limit::RateLimiter,
 };
 use crate::error::Error;
-use log::{debug, error, warn};
+use tracing::{debug, error, warn};
 use pwmp_client::pwmp_msg::{request::Request, response::Response};
 use std::{io::Read, net::SocketAddr, sync::Arc, time::Duration};
 use tokio::{net::TcpStream, time::timeout};

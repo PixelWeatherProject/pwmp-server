@@ -1,4 +1,4 @@
-use log::{debug, error, info};
+use tracing::{debug, error, info};
 use pwmp_client::{
     PwmpClient,
     ota::UpdateStatus,
