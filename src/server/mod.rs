@@ -1,7 +1,7 @@
 use crate::server::{db::DatabaseClient, handle::server_loop};
 use config::Config;
-use libc::{IPPROTO_TCP, SO_KEEPALIVE, SO_LINGER, SOL_SOCKET, TCP_NODELAY, linger, socklen_t};
-use std::{ffi::c_int, io, mem, os::fd::AsRawFd, process::exit, sync::Arc};
+use socket2::SockRef;
+use std::{io, os::fd::AsFd, process::exit, sync::Arc, time::Duration};
 use tokio::{
     net::TcpListener,
     signal::unix::{Signal, SignalKind, signal},
@@ -74,32 +74,12 @@ fn setup_signals() -> (Signal, Signal) {
     (stop_sig, ping_sig)
 }
 
-pub fn set_global_socket_params<FD: AsRawFd>(socket: &FD) -> io::Result<()> {
-    setsockopt(
-        socket,
-        SOL_SOCKET,
-        SO_LINGER,
-        linger {
-            l_linger: 5,
-            l_onoff: 1,
-        },
-    )?;
-    setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &1)?;
-    setsockopt(socket, SOL_SOCKET, SO_KEEPALIVE, &1i32)?;
+pub fn set_global_socket_params<S: AsFd>(socket: &S) -> io::Result<()> {
+    let socket: SockRef = socket.into();
+
+    socket.set_nodelay(true)?;
+    socket.set_keepalive(true)?;
+    socket.set_linger(Some(Duration::from_secs(1)))?;
 
     Ok(())
-}
-
-#[allow(clippy::needless_pass_by_value)] // Passing a reference to T causes this to break. Possibly because `ptr` becomes a double pointer?
-fn setsockopt<T, FD: AsRawFd>(fd: &FD, level: c_int, opt: c_int, value: T) -> io::Result<()> {
-    let (ptr, len) = ((&raw const value).cast(), mem::size_of::<T>());
-    let option_len = socklen_t::try_from(len)
-        .map_err(|_| io::Error::other("failed to convert usize to socklen_t"))?;
-    let err = unsafe { libc::setsockopt(fd.as_raw_fd(), level, opt, ptr, option_len) };
-
-    if err == 0 {
-        return Ok(());
-    }
-
-    Err(io::Error::last_os_error())
 }
