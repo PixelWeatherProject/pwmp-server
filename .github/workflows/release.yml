@@ -5,8 +5,8 @@ on:
       - 'v[0-9]+.[0-9]+.[0-9]+'
   workflow_dispatch:
 
-env:
-  SQLX_OFFLINE: true
+permissions:
+  contents: write
 
 jobs:
   build:
