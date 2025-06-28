@@ -1,6 +1,5 @@
 use super::db::{DatabaseClient, FirmwareBlob, MeasurementId, NodeId};
 use crate::error::Error;
-use arrayref::array_ref;
 use circular_queue::CircularQueue;
 use pwmp_client::pwmp_msg::{
     Message, MsgId, mac::Mac, request::Request, response::Response, version::Version,
@@ -103,8 +102,7 @@ impl<S> Client<S> {
 
         // Parse the length
         let message_length: usize =
-            MsgLength::from_be_bytes(*array_ref![self.buf, 0, size_of::<MsgLength>()])
-                .try_into()?;
+            MsgLength::from_be_bytes(self.buf[..size_of::<MsgLength>()].try_into()?).try_into()?;
 
         // Verify the length
         if message_length == 0 {

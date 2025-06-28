@@ -1,4 +1,4 @@
-use std::{io, num::TryFromIntError};
+use std::{array::TryFromSliceError, io, num::TryFromIntError};
 use tracing::subscriber::SetGlobalDefaultError;
 
 #[derive(Debug, thiserror::Error)]
@@ -62,4 +62,7 @@ pub enum Error {
     /// Invalid IANA time zone identifier
     #[error("Invalid or unsupported time zone: '{0}'")]
     InvalidTimeZone(String),
+
+    #[error("Slice length does not match the expected array length: {0}")]
+    ArrayFromSliceSizeMismatch(#[from] TryFromSliceError),
 }

@@ -1384,7 +1384,6 @@ dependencies = [
 name = "pwmp-server"
 version = "2.1.10"
 dependencies = [
- "arrayref",
  "chrono",
  "circular-queue",
  "clap",
