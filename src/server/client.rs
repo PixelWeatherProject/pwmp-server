@@ -77,7 +77,6 @@ impl<S> Client<S> {
             .await?;
 
         // Send the actual message next.
-        // TODO: Endianness should be handled internally, but this should be checked!
         self.stream.write_all(&raw).await?;
 
         // Flush the buffer.
@@ -108,7 +107,6 @@ impl<S> Client<S> {
         if message_length == 0 {
             return Err(Error::IllegalMessageLength);
         }
-        // TODO: Add more restrictions as needed...
 
         // Verify that the buffer is large enough.
         if self.buf.len() < message_length {
