@@ -94,16 +94,17 @@ fn handle_new_client(
 }
 
 fn display_rt_metrics() {
-    let Ok(handle) = Handle::try_current() else {
-        error!("Runtime metrics are not available");
-        return;
-    };
-    let metrics = handle.metrics();
-
-    info!(
-        "Pending tasks in the runtime's global queue: {}",
-        metrics.global_queue_depth()
-    );
-    info!("Tasks alive: {}", metrics.num_alive_tasks());
-    info!("Workers: {}", metrics.num_workers());
+    match Handle::try_current().as_ref().map(Handle::metrics) {
+        Ok(metrics) => {
+            info!(
+                "Stats: tasks_pending={}, tasks_alive={}, workers={}",
+                metrics.global_queue_depth(),
+                metrics.num_alive_tasks(),
+                metrics.num_workers()
+            );
+        }
+        Err(e) => {
+            error!("Runtime metrics are not available: {e}");
+        }
+    }
 }
