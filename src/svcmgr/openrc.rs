@@ -1,5 +1,5 @@
 use super::traits::ServiceManager;
-use std::io::Result;
+use crate::error::Error;
 
 pub struct Manager;
 
@@ -8,39 +8,39 @@ impl ServiceManager for Manager {
         false
     }
 
-    fn installed(&self) -> Result<bool> {
+    fn installed(&self) -> bool {
         unimplemented!()
     }
 
-    fn running(&self) -> Result<bool> {
+    fn running(&self) -> Result<bool, Error> {
         unimplemented!()
     }
 
-    fn install(&self) -> Result<()> {
+    fn install(&self) -> Result<(), Error> {
         unimplemented!()
     }
 
-    fn uninstall(&self) -> Result<()> {
+    fn uninstall(&self) -> Result<(), Error> {
         unimplemented!()
     }
 
-    fn disable(&self) -> Result<()> {
+    fn disable(&self) -> Result<(), Error> {
         unimplemented!()
     }
 
-    fn enable(&self) -> Result<()> {
+    fn enable(&self) -> Result<(), Error> {
         unimplemented!()
     }
 
-    fn enabled(&self) -> Result<bool> {
+    fn enabled(&self) -> Result<bool, Error> {
         unimplemented!()
     }
 
-    fn start(&self) -> Result<()> {
+    fn start(&self) -> Result<(), Error> {
         unimplemented!()
     }
 
-    fn stop(&self) -> Result<()> {
+    fn stop(&self) -> Result<(), Error> {
         unimplemented!()
     }
 }

@@ -1,15 +1,9 @@
 use super::traits::ServiceManager;
-use tracing::{debug, error, info};
-use std::{
-    env::current_exe,
-    fs,
-    io::{Error, Result},
-    path::PathBuf,
-    process::{Command, Output},
-};
-use users::{get_current_uid, get_user_by_uid};
+use crate::error::Error;
+use regex::Regex;
+use std::{fs::OpenOptions, io::Write, path::PathBuf, process::Command};
+use tracing::{error, info};
 
-const CMDLINE: &str = "systemd";
 const SVCDIR: &str = "/etc/systemd/system";
 const SVCNAME: &str = "pwmp-server";
 const SVCEXT: &str = "service";
@@ -18,136 +12,99 @@ const CMDLINE_CLIENT: &str = "systemctl";
 pub struct Manager;
 
 impl Manager {
-    pub fn full_service_path() -> PathBuf {
-        let mut buf = PathBuf::from(SVCDIR);
-
-        buf.push(format!("{SVCNAME}.{SVCEXT}"));
-        buf
-    }
-
-    pub fn exec_client_cmd(
-        &self,
-        cmd: &str,
-        check_installed: bool,
-        check_exit_code: bool,
-    ) -> Result<Output> {
-        if check_installed && !self.installed()? {
-            return Err(Error::other("Service is not installed"));
-        }
-
-        let out = Command::new(CMDLINE_CLIENT).args([cmd, SVCNAME]).output()?;
-
-        if check_exit_code && !out.status.success() {
-            return Err(Error::other(format!(
-                "\"{CMDLINE_CLIENT}\" exited with status code {}",
-                out.status.code().unwrap()
-            )));
-        }
-
-        Ok(out)
+    fn service_file_path() -> PathBuf {
+        let mut path = PathBuf::from(SVCDIR);
+        path.push(SVCNAME);
+        path.set_extension(SVCEXT);
+        path
     }
 }
 
 impl ServiceManager for Manager {
     fn detect(&self) -> bool {
-        debug!("Detecting SystemD");
-
-        let Ok(out) = Command::new(CMDLINE).arg("--version").output() else {
-            debug!("Failed to execute \"{CMDLINE}\"");
+        let Ok(output) = super::exec_command(Command::new(CMDLINE_CLIENT).arg("--version")) else {
+            error!("Failed to execute SystemD CLI");
             return false;
         };
 
-        if !out.status.success() {
-            error!(
-                "\"{CMDLINE}\" exited with status code {}",
-                out.status.clone()
-            );
-            return false;
-        }
-
-        debug!("Detected SystemD CLI");
-
-        let Ok(text) = String::from_utf8(out.stdout) else {
-            error!("Failed to parse output of \"{CMDLINE}\"");
+        let version_regex = Regex::new(r"\((.*)\)").unwrap();
+        let Some(version_string) = version_regex.captures(&output).and_then(|res| res.get(1))
+        else {
+            error!("Failed to parse SystemD version string");
             return false;
         };
-        let ver_info = text.lines().next().unwrap();
-        info!("Detected {ver_info}");
 
-        if PathBuf::from(SVCDIR).read_dir().is_err() {
-            error!("Could not check directory \"{SVCDIR}\"");
-            return false;
-        }
-
+        info!("Found SystemD v{}", version_string.as_str());
         true
     }
 
-    fn installed(&self) -> Result<bool> {
-        let svcfile = Self::full_service_path();
-
-        Ok(svcfile.exists())
+    fn installed(&self) -> bool {
+        let mut svcfile = PathBuf::from(SVCDIR);
+        svcfile.push(format!("{SVCNAME}.{SVCEXT}"));
+        svcfile.is_file()
     }
 
-    fn install(&self) -> Result<()> {
-        let user = get_user_by_uid(get_current_uid()).unwrap();
-        let this_exec = current_exe().unwrap();
+    fn running(&self) -> Result<bool, Error> {
+        let status =
+            super::exec_command(Command::new(CMDLINE_CLIENT).args(["is-active", SVCNAME]))?;
+        Ok(status == "active")
+    }
 
-        let svcfile_path = Self::full_service_path();
-        let svcfile = format!(
-            include_str!("templates/systemd.service"),
-            user = user.name().to_string_lossy(),
-            exec = this_exec.display()
+    fn enabled(&self) -> Result<bool, Error> {
+        let status =
+            super::exec_command(Command::new(CMDLINE_CLIENT).args(["is-enabled", SVCNAME]))?;
+        Ok(status == "enabled")
+    }
+
+    fn install(&self) -> Result<(), Error> {
+        let mut svcfile = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(Self::service_file_path())?;
+
+        let mut svc = include_str!("templates/systemd.service").to_string();
+        svc = svc.replace("{user}", &whoami::username());
+        svc = svc.replace(
+            "{exec}",
+            &std::env::current_exe().map(|path| path.display().to_string())?,
         );
 
-        info!(
-            "Creating service \"{SVCNAME}.{SVCEXT}\" at \"{}\"",
-            svcfile_path.display()
-        );
+        svcfile.write_all(svc.as_bytes())?;
+        svcfile.flush()?;
 
-        fs::write(svcfile_path, svcfile)?;
         Ok(())
     }
 
-    fn uninstall(&self) -> Result<()> {
-        if !self.installed()? {
-            return Err(Error::other("Service is not installed"));
-        }
-        self.disable()?;
-
-        fs::remove_file(Self::full_service_path())
+    fn uninstall(&self) -> Result<(), Error> {
+        Ok(std::fs::remove_file(Self::service_file_path())?)
     }
 
-    fn enabled(&self) -> Result<bool> {
-        let out = self.exec_client_cmd("is-enabled", true, true)?;
-        let enabled = out.stdout == b"enabled\n";
-
-        Ok(enabled)
-    }
-
-    fn enable(&self) -> Result<()> {
-        self.exec_client_cmd("enable", true, true)?;
+    fn enable(&self) -> Result<(), Error> {
+        Command::new(CMDLINE_CLIENT)
+            .args(["enable", SVCNAME])
+            .output()?;
         Ok(())
     }
 
-    fn disable(&self) -> Result<()> {
-        self.exec_client_cmd("disable", true, true)?;
+    fn disable(&self) -> Result<(), Error> {
+        Command::new(CMDLINE_CLIENT)
+            .args(["disable", SVCNAME])
+            .output()?;
         Ok(())
     }
 
-    fn start(&self) -> Result<()> {
-        self.exec_client_cmd("start", true, true)?;
+    fn start(&self) -> Result<(), Error> {
+        Command::new(CMDLINE_CLIENT)
+            .args(["start", SVCNAME])
+            .output()?;
         Ok(())
     }
 
-    fn stop(&self) -> Result<()> {
-        self.exec_client_cmd("stop", true, true)?;
+    fn stop(&self) -> Result<(), Error> {
+        Command::new(CMDLINE_CLIENT)
+            .args(["stop", SVCNAME])
+            .output()?;
         Ok(())
-    }
-
-    fn running(&self) -> Result<bool> {
-        let out = self.exec_client_cmd("is-active", true, true)?;
-        let enabled = out.stdout == b"active\n";
-
-        Ok(enabled)
     }
 }

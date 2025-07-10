@@ -1,70 +1,180 @@
 use self::traits::ServiceManager;
-use crate::cli::ServiceCommand;
+use crate::{cli::ServiceCommand, error::Error};
+use std::process::{Command, exit};
 use tracing::{error, info, warn};
-use std::{io, process::exit};
 
 mod openrc;
 mod systemd;
 mod traits;
 
+#[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
 pub fn main(cmd: ServiceCommand) {
     let manager = detect_manager();
 
     match cmd {
         ServiceCommand::Status => {
-            match (manager.installed(), manager.enabled(), manager.running()) {
-                (Err(why), ..) => info!("Could not determine if the service is installed: {why}"),
-                (_, Err(why), ..) => info!("Could not determine of the service is enabled: {why}"),
-                (_, _, Err(why)) => info!("Could not determine if the service is running: {why}"),
-                (Ok(false), ..) => {
-                    info!("Service is not installed.");
+            if !manager.installed() {
+                error!("Service is not installed");
+                return;
+            }
+
+            let running = match manager.running() {
+                Ok(res) => res,
+                Err(why) => {
+                    error!("Failed to check if the service is running: {why}");
+                    exit(1);
                 }
-                (Ok(true), Ok(true), Ok(true)) => {
-                    info!("Service is installed, enabled and running");
+            };
+
+            let enabled = match manager.enabled() {
+                Ok(res) => res,
+                Err(why) => {
+                    error!("Failed to check if the service is enabled: {why}");
+                    exit(1);
                 }
-                (Ok(true), Ok(true), Ok(false)) => {
-                    info!("Service is installed and enabled but not running");
+            };
+
+            info!("Running: {}", running);
+            info!("Enabled: {}", enabled);
+        }
+        ServiceCommand::Install => {
+            if manager.installed() {
+                warn!("Service is already installed");
+                return;
+            }
+
+            match manager.install() {
+                Ok(()) => {
+                    info!("Service has been installed successfully");
+                    warn!("The service must be enabled and started manually");
                 }
-                (Ok(true), Ok(false), Ok(false)) => {
-                    info!("Service is installed, but is disabled and inactive");
-                }
-                (Ok(true), Ok(false), Ok(true)) => {
-                    info!("Service is installed and running, but won't auto-start on boot");
+                Err(why) => {
+                    error!("Failed to install the service: {why}");
+                    exit(1);
                 }
             }
         }
-        ServiceCommand::Install => {
-            perform_cmd(|| manager.install(), "install", "installed");
-            warn!("The service must be enabled manually");
-        }
         ServiceCommand::Uninstall => {
-            perform_cmd(|| manager.uninstall(), "uninstall", "uninstalled");
+            if !manager.installed() {
+                error!("Service is not installed");
+                exit(1);
+            }
+
+            info!("Stopping the service");
+            if let Err(why) = manager.stop() {
+                error!("Failed to stop the service: {why}");
+                exit(1);
+            }
+
+            info!("Disabling the service");
+            if let Err(why) = manager.disable() {
+                error!("Failed to disable the service: {why}");
+                exit(1);
+            }
+
+            match manager.uninstall() {
+                Ok(()) => {
+                    info!("Service has been uninstalled successfully");
+                }
+                Err(why) => {
+                    error!("Failed to uninstall the service: {why}");
+                    exit(1);
+                }
+            }
         }
         ServiceCommand::Enable => {
-            perform_cmd(|| manager.enable(), "enable", "enabled");
+            if !manager.installed() {
+                error!("Service is not installed");
+                exit(1);
+            }
+
+            if manager.enabled().is_ok_and(|res| res) {
+                warn!("Service is already enabled");
+                return;
+            }
+
+            match manager.enable() {
+                Ok(()) => {
+                    info!("Service has been enabled successfully");
+                }
+                Err(why) => {
+                    error!("Failed to enable the service: {why}");
+                    exit(1);
+                }
+            }
         }
         ServiceCommand::Disable => {
-            perform_cmd(|| manager.disable(), "disable", "disabled");
+            if !manager.installed() {
+                error!("Service is not installed");
+                exit(1);
+            }
+
+            if manager.enabled().is_ok_and(|res| !res) {
+                warn!("Service is already disabled");
+                return;
+            }
+
+            match manager.disable() {
+                Ok(()) => {
+                    info!("Service has been disabled successfully");
+                }
+                Err(why) => {
+                    error!("Failed to disable the service: {why}");
+                    exit(1);
+                }
+            }
         }
         ServiceCommand::Start => {
-            perform_cmd(|| manager.start(), "start", "started");
+            if !manager.installed() {
+                error!("Service is not installed");
+                exit(1);
+            }
+
+            if manager.running().is_ok_and(|res| res) {
+                warn!("Service is already running");
+                return;
+            }
+
+            match manager.start() {
+                Ok(()) => {
+                    info!("Service has been started successfully");
+                }
+                Err(why) => {
+                    error!("Failed to start the service: {why}");
+                    exit(1);
+                }
+            }
         }
-        ServiceCommand::Stop => {
-            perform_cmd(|| manager.stop(), "stop", "stopped");
-        }
+        ServiceCommand::Stop => match manager.start() {
+            Ok(()) => {
+                info!("Service has been stopped successfully");
+            }
+            Err(why) => {
+                error!("Failed to stop the service: {why}");
+                exit(1);
+            }
+        },
         ServiceCommand::Reinstall => {
-            main(ServiceCommand::Reinstall);
+            if !manager.installed() {
+                error!("Service is not installed");
+                exit(1);
+            }
+
+            main(ServiceCommand::Uninstall);
+            main(ServiceCommand::Install);
         }
     }
 }
 
-fn perform_cmd<F: FnOnce() -> io::Result<()>>(func: F, action_name: &str, action_past: &str) {
-    if let Err(why) = func() {
-        error!("Failed to {action_name} service: {why}");
-        exit(1);
+fn exec_command(cmd: &mut Command) -> Result<String, Error> {
+    let output = cmd.output()?;
+
+    if !output.status.success() {
+        return Err(Error::SubprocessExit);
     }
 
-    info!("Service {action_past} successfully");
+    let output_as_str = String::from_utf8(output.stdout)?;
+    Ok(output_as_str.trim_ascii_end().to_string())
 }
 
 fn detect_manager() -> Box<dyn ServiceManager> {

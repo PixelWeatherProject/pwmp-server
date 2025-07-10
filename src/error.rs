@@ -1,4 +1,4 @@
-use std::{array::TryFromSliceError, io, num::TryFromIntError};
+use std::{array::TryFromSliceError, io, num::TryFromIntError, string::FromUtf8Error};
 use tracing::subscriber::SetGlobalDefaultError;
 
 #[derive(Debug, thiserror::Error)]
@@ -65,4 +65,12 @@ pub enum Error {
 
     #[error("Slice length does not match the expected array length: {0}")]
     ArrayFromSliceSizeMismatch(#[from] TryFromSliceError),
+
+    /// A subprocess has exited with an error.
+    #[error("A process has returned a non-zero exit code")]
+    SubprocessExit,
+
+    /// Failed to parse a UTF-8 string.
+    #[error("Failed to parse a UTF-8 string")]
+    StringFromUtf8Bytes(#[from] FromUtf8Error),
 }
