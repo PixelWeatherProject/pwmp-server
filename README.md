@@ -105,7 +105,6 @@ Cross-compilation to macOS requires additional setup, due to licensing restricti
 |  `x86_64-unknown-linux-gnu`   |       ✅       |             ✅             |
 |  `x86_64-unknown-linux-musl`  |       ✅       |             ✅             |
 |   `x86_64-unknown-freebsd`    |       ❌       |            N/A            |
-|      `x86_64-pc-solaris`      |       ❌       |            N/A            |
 |  `aarch64-unknown-linux-gnu`  |       ✅       |             ✅             |
 | `aarch64-unknown-linux-musl`  |       ✅       |             ✅             |
 |    `aarch64-apple-darwin`     |       ✅       |             ❌             |
