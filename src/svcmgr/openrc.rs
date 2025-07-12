@@ -9,6 +9,7 @@ use tracing::{error, info};
 const SVCDIR: &str = "/etc/init.d";
 const SVCNAME: &str = "pwmp-server";
 
+#[derive(Clone, Copy)]
 enum CliCmd {
     RcService,
     RcUpdate,
@@ -66,7 +67,7 @@ impl ServiceManager for Manager {
             return false;
         };
 
-        let version_regex = Regex::new(r#"\d+.\d+.\d+"#).unwrap();
+        let version_regex = Regex::new(r"\d+.\d+.\d+").unwrap();
         let Some(version_string) = version_regex.captures(&output).and_then(|res| res.get(0))
         else {
             error!("Failed to parse OpenRC version string");
@@ -89,7 +90,7 @@ impl ServiceManager for Manager {
     }
 
     fn enabled(&self) -> Result<bool, Error> {
-        let regex = Regex::new(r#"pwmp-server \|.*default.*"#).unwrap();
+        let regex = Regex::new(r"pwmp-server \|.*default.*").unwrap();
         let services = Self::call_cli_get_output(CliCmd::RcUpdate, ["show"])?;
         Ok(regex.is_match(&services))
     }

@@ -157,6 +157,7 @@ impl Client<Unathenticated> {
         }
     }
 
+    #[allow(clippy::cognitive_complexity)]
     pub async fn authorize(mut self, db: &DatabaseClient) -> Result<Client<Authenticated>> {
         debug!("{}: Awaiting greeting", self.peer_addr);
         let mac = self.receive_handshake().await?;
@@ -282,6 +283,7 @@ impl Client<Authenticated> {
 
     // Note: This method could be implemented for Client<S>, but that would make it impossible
     //       to print the Node ID. This way it's possible and makes debugging slightly easier.
+    #[allow(clippy::cognitive_complexity)]
     pub async fn shutdown(&mut self, reason: Option<Response>) -> Result<()> {
         debug!("{}: Attempting to shutdown socket", self.id());
 

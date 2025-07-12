@@ -10,7 +10,7 @@ use std::{io::Read, net::SocketAddr, sync::Arc, time::Duration};
 use tokio::{net::TcpStream, time::timeout};
 use tracing::{debug, error, warn};
 
-#[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value, clippy::cognitive_complexity)]
 pub async fn handle_client(
     client: TcpStream,
     peer_addr: SocketAddr,

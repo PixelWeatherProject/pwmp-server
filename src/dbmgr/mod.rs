@@ -3,9 +3,10 @@ use crate::{
     server::{config::Config, db::DatabaseClient},
 };
 use color_print::cprintln;
-use tracing::{debug, error, info};
 use std::{io::stdin, process::exit};
+use tracing::{debug, error, info};
 
+#[allow(clippy::cognitive_complexity)]
 pub async fn main(cmd: DatabaseCommand, config: &Config) {
     match cmd {
         DatabaseCommand::Test => match DatabaseClient::new(config).await {

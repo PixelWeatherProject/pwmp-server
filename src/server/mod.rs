@@ -15,6 +15,7 @@ pub mod db;
 pub mod handle;
 pub mod rate_limit;
 
+#[allow(clippy::cognitive_complexity)]
 pub async fn main(config: Config) {
     let config = Arc::new(config);
 

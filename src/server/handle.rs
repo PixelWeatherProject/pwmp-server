@@ -10,7 +10,7 @@ use tokio::{
 };
 use tracing::{debug, error, info, warn};
 
-#[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value, clippy::cognitive_complexity)]
 pub async fn server_loop(
     server: &TcpListener,
     db: DatabaseClient,
@@ -50,6 +50,7 @@ pub async fn server_loop(
     }
 }
 
+#[allow(clippy::cognitive_complexity)]
 fn handle_new_client(
     client: TcpStream,
     peer_addr: SocketAddr,
