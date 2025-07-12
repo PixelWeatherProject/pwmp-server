@@ -1,6 +1,6 @@
 use self::traits::ServiceManager;
-use crate::{cli::ServiceCommand, error::Error};
-use std::process::{Command, exit};
+use crate::cli::ServiceCommand;
+use std::process::exit;
 use tracing::{error, info, warn};
 
 mod openrc;
@@ -164,17 +164,6 @@ pub fn main(cmd: ServiceCommand) {
             main(ServiceCommand::Install);
         }
     }
-}
-
-fn exec_command(cmd: &mut Command) -> Result<String, Error> {
-    let output = cmd.output()?;
-
-    if !output.status.success() {
-        return Err(Error::SubprocessExit);
-    }
-
-    let output_as_str = String::from_utf8(output.stdout)?;
-    Ok(output_as_str.trim_ascii_end().to_string())
 }
 
 fn detect_manager() -> Box<dyn ServiceManager> {

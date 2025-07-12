@@ -18,11 +18,44 @@ impl Manager {
         path.set_extension(SVCEXT);
         path
     }
+
+    fn call_cli<I, S>(operation: &'static str, args: I) -> Result<std::process::Output, Error>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<std::ffi::OsStr>,
+    {
+        let output = Command::new(CMDLINE_CLIENT)
+            .arg(operation)
+            .args(args)
+            .output()?;
+        if !output.status.success() {
+            return Err(Error::SubprocessExit);
+        }
+        Ok(output)
+    }
+
+    fn simple_call_cli<I, S>(operation: &'static str, args: I) -> Result<(), Error>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<std::ffi::OsStr>,
+    {
+        Self::call_cli(operation, args)?;
+        Ok(())
+    }
+
+    fn call_cli_get_output<I, S>(operation: &'static str, args: I) -> Result<String, Error>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<std::ffi::OsStr>,
+    {
+        let output = Self::call_cli(operation, args)?;
+        Ok(String::from_utf8(output.stdout)?)
+    }
 }
 
 impl ServiceManager for Manager {
     fn detect(&self) -> bool {
-        let Ok(output) = super::exec_command(Command::new(CMDLINE_CLIENT).arg("--version")) else {
+        let Ok(output) = Self::call_cli_get_output("", ["--version"]) else {
             error!("Failed to execute SystemD CLI");
             return false;
         };
@@ -45,15 +78,11 @@ impl ServiceManager for Manager {
     }
 
     fn running(&self) -> Result<bool, Error> {
-        let status =
-            super::exec_command(Command::new(CMDLINE_CLIENT).args(["is-active", SVCNAME]))?;
-        Ok(status == "active")
+        Ok(Self::call_cli_get_output("is-active", [SVCNAME])? == "active")
     }
 
     fn enabled(&self) -> Result<bool, Error> {
-        let status =
-            super::exec_command(Command::new(CMDLINE_CLIENT).args(["is-enabled", SVCNAME]))?;
-        Ok(status == "enabled")
+        Ok(Self::call_cli_get_output("is-enabled", [SVCNAME])? == "enabled")
     }
 
     fn install(&self) -> Result<(), Error> {
@@ -81,30 +110,18 @@ impl ServiceManager for Manager {
     }
 
     fn enable(&self) -> Result<(), Error> {
-        Command::new(CMDLINE_CLIENT)
-            .args(["enable", SVCNAME])
-            .output()?;
-        Ok(())
+        Self::simple_call_cli("enable", [SVCNAME])
     }
 
     fn disable(&self) -> Result<(), Error> {
-        Command::new(CMDLINE_CLIENT)
-            .args(["disable", SVCNAME])
-            .output()?;
-        Ok(())
+        Self::simple_call_cli("disable", [SVCNAME])
     }
 
     fn start(&self) -> Result<(), Error> {
-        Command::new(CMDLINE_CLIENT)
-            .args(["start", SVCNAME])
-            .output()?;
-        Ok(())
+        Self::simple_call_cli("start", [SVCNAME])
     }
 
     fn stop(&self) -> Result<(), Error> {
-        Command::new(CMDLINE_CLIENT)
-            .args(["stop", SVCNAME])
-            .output()?;
-        Ok(())
+        Self::simple_call_cli("stop", [SVCNAME])
     }
 }
