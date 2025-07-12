@@ -76,9 +76,7 @@ impl ServiceManager for Manager {
     }
 
     fn installed(&self) -> bool {
-        let mut svcfile = PathBuf::from(SVCDIR);
-        svcfile.push(format!("{SVCNAME}.{SVCEXT}"));
-        svcfile.is_file()
+        Self::service_file_path().is_file()
     }
 
     fn running(&self) -> Result<bool, Error> {
