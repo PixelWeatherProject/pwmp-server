@@ -1,0 +1,34 @@
+#!/sbin/openrc-run
+
+description="PixelWeather Messaging Protocol Server"
+
+command="{exec}"
+command_user="{user}"
+
+pidfile="/run/${RC_SVCNAME}.pid"
+
+supervisor="supervise-daemon"
+retry="5"
+
+depend() {
+    need net
+}
+
+start_pre() {
+    checkpath --directory --owner {user}:{user} /run
+}
+
+start() {
+    ebegin "Starting PixelWeather Messaging Protocol Server"
+    supervise-daemon "${RC_SVCNAME}" --start --pidfile "${pidfile}" \
+        --user "{user}" --stdout "/var/log/${RC_SVCNAME}.log" --stderr "/var/log/${RC_SVCNAME}.err" \
+        --respawn-delay 30 --respawn-max 5:10 \
+        -- "${command}"
+    eend $?
+}
+
+stop() {
+    ebegin "Stopping PixelWeather Messaging Protocol Server"
+    supervise-daemon "${RC_SVCNAME}" --stop --pidfile "${pidfile}"
+    eend $?
+}
