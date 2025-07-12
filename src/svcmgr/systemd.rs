@@ -24,13 +24,17 @@ impl Manager {
         I: IntoIterator<Item = S>,
         S: AsRef<std::ffi::OsStr>,
     {
-        let output = Command::new(CMDLINE_CLIENT)
-            .arg(operation)
-            .args(args)
-            .output()?;
+        let mut command = Command::new(CMDLINE_CLIENT);
+        if !operation.is_empty() {
+            command.arg(operation);
+        }
+        command.args(args);
+
+        let output = command.output()?;
         if !output.status.success() {
             return Err(Error::SubprocessExit);
         }
+
         Ok(output)
     }
 
