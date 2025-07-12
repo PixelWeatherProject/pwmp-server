@@ -60,22 +60,24 @@ pub fn main(cmd: ServiceCommand) {
                 exit(1);
             }
 
-            debug!("Service is not running, skipping stop operation");
             if manager.running().is_ok_and(|r| r) {
                 info!("Stopping the service");
                 if let Err(why) = manager.stop() {
                     error!("Failed to stop the service: {why}");
                     exit(1);
                 }
+            } else {
+                debug!("Service is not running, skipping stop operation");
             }
 
-            debug!("Service is not enabled, skipping disable operation");
             if manager.enabled().is_ok_and(|e| e) {
                 info!("Disabling the service");
                 if let Err(why) = manager.disable() {
                     error!("Failed to disable the service: {why}");
                     exit(1);
                 }
+            } else {
+                debug!("Service is not enabled, skipping disable operation");
             }
 
             match manager.uninstall() {
