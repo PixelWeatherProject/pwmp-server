@@ -151,15 +151,27 @@ pub fn main(cmd: ServiceCommand) {
                 }
             }
         }
-        ServiceCommand::Stop => match manager.stop() {
-            Ok(()) => {
-                info!("Service has been stopped successfully");
-            }
-            Err(why) => {
-                error!("Failed to stop the service: {why}");
+        ServiceCommand::Stop => {
+            if !manager.installed() {
+                error!("Service is not installed");
                 exit(1);
             }
-        },
+
+            if manager.running().is_ok_and(|res| !res) {
+                warn!("Service is already stopped");
+                return;
+            }
+
+            match manager.stop() {
+                Ok(()) => {
+                    info!("Service has been stopped successfully");
+                }
+                Err(why) => {
+                    error!("Failed to stop the service: {why}");
+                    exit(1);
+                }
+            }
+        }
         ServiceCommand::Reinstall => {
             if !manager.installed() {
                 error!("Service is not installed");
