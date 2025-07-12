@@ -151,7 +151,7 @@ pub fn main(cmd: ServiceCommand) {
                 }
             }
         }
-        ServiceCommand::Stop => match manager.start() {
+        ServiceCommand::Stop => match manager.stop() {
             Ok(()) => {
                 info!("Service has been stopped successfully");
             }
