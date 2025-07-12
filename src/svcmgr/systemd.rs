@@ -53,7 +53,8 @@ impl Manager {
         S: AsRef<std::ffi::OsStr>,
     {
         let output = Self::call_cli(operation, args)?;
-        Ok(String::from_utf8(output.stdout)?)
+        let output_as_str = String::from_utf8(output.stdout)?;
+        Ok(output_as_str.trim_end().to_string()) /* remove any newlines at the end */
     }
 }
 
