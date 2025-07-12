@@ -73,12 +73,13 @@ Commands:
   reinstall  Reinstall service
 ```
 
-Service management is only supported on **Linux** systems with **Systemd**. There is a boilerplate implementation for **OpenRC**, but it's not supported yet.
-
-TODO:
-- [x] Add support for Systemd services
-- [ ] Add support for OpenRC services
-- [ ] Add support for macOS Homebrew services
+### Service manager support table
+|                   **Service manager**                   |  **Supported** |
+|:-------------------------------------------------------:|:--------------:|
+|             [SystemD](https://systemd.io/)              |       ✅       |
+|        [OpenRC](https://github.com/OpenRC/openrc)       |       ✅       |
+|  [Homebrew Services](https://github.com/Homebrew/brew)  |       ❌       |
+|                        Windows                          |       ❌       |
 
 Service management on Windows is **not** and **will not** be supported.
 
