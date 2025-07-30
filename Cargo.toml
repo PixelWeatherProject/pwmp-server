@@ -20,9 +20,9 @@ pwmp-client = { git = "https://github.com/PixelWeatherProject/pwmp-client.git", 
 time = { version = "0.3.37", default-features = false, features = ["macros"] }
 sqlx = { version = "0.8.3", default-features = false, features = [
     "postgres",
+    "sqlite",
     "runtime-tokio",
     "migrate",
-    "macros",
     "tls-rustls",
 ] }
 tokio = { version = "1.43.0", default-features = false, features = [
@@ -49,3 +49,4 @@ semaphore = "0.4.0"
 tracing = "0.1.41"
 chrono = "0.4.41"
 regex = "1.11.1"
+async-trait = "0.1.88"

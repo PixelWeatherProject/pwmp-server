@@ -1,4 +1,4 @@
-use super::db::{DatabaseClient, FirmwareBlob, MeasurementId, NodeId};
+use super::database::{Backend, DatabaseClient, FirmwareBlob, MeasurementId, NodeId};
 use crate::error::Error;
 use circular_queue::CircularQueue;
 use pwmp_client::pwmp_msg::{

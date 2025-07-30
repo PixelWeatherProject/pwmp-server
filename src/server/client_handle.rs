@@ -1,7 +1,7 @@
 use super::{
     client::{Authenticated, Client},
     config::Config,
-    db::DatabaseClient,
+    database::{Backend, DatabaseClient},
     rate_limit::RateLimiter,
 };
 use crate::error::Error;

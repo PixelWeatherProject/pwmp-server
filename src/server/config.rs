@@ -25,13 +25,25 @@ pub struct ServerConfig {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct DatabaseConfig {
+pub enum DatabaseConfig {
+    Postgres(PostgresConfig),
+    Sqlite(SqliteConfig),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PostgresConfig {
     pub host: Box<str>,
     pub port: u16,
     pub user: Box<str>,
     pub password: Box<str>,
     pub name: Box<str>,
     pub ssl: bool,
+    pub timezone: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SqliteConfig {
+    pub path: PathBuf,
     pub timezone: Option<String>,
 }
 
@@ -72,6 +84,12 @@ impl Default for ServerConfig {
 
 impl Default for DatabaseConfig {
     fn default() -> Self {
+        Self::Postgres(PostgresConfig::default())
+    }
+}
+
+impl Default for PostgresConfig {
+    fn default() -> Self {
         Self {
             host: "192.168.0.12".into(),
             port: 5432,
@@ -79,6 +97,15 @@ impl Default for DatabaseConfig {
             password: "root".into(),
             name: "pixelweather".into(),
             ssl: false,
+            timezone: None,
+        }
+    }
+}
+
+impl Default for SqliteConfig {
+    fn default() -> Self {
+        Self {
+            path: PathBuf::from("/tmp/pixelweather.sqlite3"),
             timezone: None,
         }
     }
@@ -104,5 +131,20 @@ impl Config {
 
     pub const fn server_bind_addr(&self) -> SocketAddrV4 {
         SocketAddrV4::new(self.server.host, self.server.port)
+    }
+
+    pub fn short_db_identifier(&self) -> String {
+        match &self.database {
+            DatabaseConfig::Postgres(config) => config.host.to_string(),
+            DatabaseConfig::Sqlite(config) => config.path.display().to_string(),
+        }
+    }
+
+    pub fn db_timezone(&self) -> Option<String> {
+        match &self.database {
+            DatabaseConfig::Postgres(config) => config.timezone.clone(),
+            DatabaseConfig::Sqlite(config) => config.timezone.clone(),
+        }
+        .or_else(|| iana_time_zone::get_timezone().ok())
     }
 }

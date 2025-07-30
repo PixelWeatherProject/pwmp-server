@@ -1,4 +1,4 @@
-use super::{config::Config, db::DatabaseClient, rate_limit::RateLimiter};
+use super::{config::Config, database::DatabaseClient, rate_limit::RateLimiter};
 use crate::server::client_handle::handle_client;
 use semaphore::Semaphore;
 use std::{net::SocketAddr, panic, sync::Arc, time::Duration};

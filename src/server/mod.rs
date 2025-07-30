@@ -1,4 +1,7 @@
-use crate::server::{db::DatabaseClient, handle::server_loop};
+use crate::server::{
+    database::{Backend, DatabaseClient},
+    handle::server_loop,
+};
 use config::Config;
 use socket2::SockRef;
 use std::{io, os::fd::AsFd, process::exit, sync::Arc, time::Duration};
@@ -11,7 +14,8 @@ use tracing::{debug, error, info, warn};
 mod client;
 mod client_handle;
 pub mod config;
-pub mod db;
+pub mod database;
+//pub mod db;
 pub mod handle;
 pub mod rate_limit;
 
@@ -19,7 +23,10 @@ pub mod rate_limit;
 pub async fn main(config: Config) {
     let config = Arc::new(config);
 
-    info!("Connecting to database at \"{}\"", config.database.host);
+    info!(
+        "Connecting to database at \"{}\"",
+        config.short_db_identifier()
+    );
     let db = match DatabaseClient::new(&config).await {
         Ok(db) => db,
         Err(why) => {
@@ -29,12 +36,7 @@ pub async fn main(config: Config) {
     };
 
     debug!("Setting timezone");
-    match config
-        .database
-        .timezone
-        .clone()
-        .or_else(|| iana_time_zone::get_timezone().ok())
-    {
+    match config.db_timezone() {
         Some(tz) => match db.setup_timezone(&tz).await {
             Ok(()) => info!("Timezone updated to \"{tz}\" successfully"),
             Err(why) => {

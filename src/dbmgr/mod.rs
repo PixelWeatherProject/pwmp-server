@@ -1,6 +1,9 @@
 use crate::{
     cli::DatabaseCommand,
-    server::{config::Config, db::DatabaseClient},
+    server::{
+        config::Config,
+        database::{Backend, DatabaseClient},
+    },
 };
 use color_print::cprintln;
 use std::{io::stdin, process::exit};
@@ -42,7 +45,7 @@ pub async fn main(cmd: DatabaseCommand, config: &Config) {
             };
 
             info!("Connected to the database");
-            confirm_erase(&config.database.name, &config.database.host);
+            confirm_erase(&config.short_db_identifier());
 
             match client.erase(content_only, keep_devices).await {
                 Ok(()) => info!("Success!"),
@@ -52,11 +55,11 @@ pub async fn main(cmd: DatabaseCommand, config: &Config) {
     }
 }
 
-fn confirm_erase(database_name: &str, host: &str) {
+fn confirm_erase(database: &str) {
     const KEY: &str = "yes, do it!";
 
     cprintln!(
-        "\n<red><bold><underline>WARNING:</> <yellow>THIS ACTION WILL COMPLETELE ERASE <underline>ALL DATA</underline> AND <italic>(IF SPECIFIED)</italic> <underline>TABLES</underline> FROM THE DATABASE</> <bright-blue><bold>\"{database_name}\"</> <yellow>ON</> <bright-blue>\"{host}\"</> <yellow><bold>!!!</>"
+        "\n<red><bold><underline>WARNING:</> <yellow>THIS ACTION WILL COMPLETELE ERASE <underline>ALL DATA</underline> AND <italic>(IF SPECIFIED)</italic> <underline>TABLES</underline> FROM THE DATABASE</> <bright-blue><bold>\"{database}\"</> <yellow><bold>!!!</>"
     );
     cprintln!("\n<blue>TYPE <italic>\"{KEY}\"</italic> TO CONFIRM THIS OPERATION!</>");
 
