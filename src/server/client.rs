@@ -73,7 +73,7 @@ impl<S> Client<S> {
 
         // Send the length first as network endian.
         self.stream
-            .write_all(length.to_ne_bytes().as_slice())
+            .write_all(length.to_be_bytes().as_slice())
             .await?;
 
         // Send the actual message next.
@@ -101,7 +101,7 @@ impl<S> Client<S> {
 
         // Parse the length
         let message_length: usize =
-            MsgLength::from_ne_bytes(self.buf[..size_of::<MsgLength>()].try_into()?).try_into()?;
+            MsgLength::from_be_bytes(self.buf[..size_of::<MsgLength>()].try_into()?).try_into()?;
 
         // Verify the length
         if message_length == 0 {
