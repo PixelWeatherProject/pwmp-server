@@ -64,7 +64,7 @@ impl Default for RateLimitConfig {
 impl Default for ServerConfig {
     fn default() -> Self {
         Self {
-            host: Ipv4Addr::new(0, 0, 0, 0),
+            host: Ipv4Addr::UNSPECIFIED,
             port: 55300,
         }
     }
