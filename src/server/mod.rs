@@ -78,7 +78,7 @@ fn setup_signals() -> (Signal, Signal) {
 pub fn set_global_socket_params<S: AsFd>(socket: &S) -> io::Result<()> {
     let socket: SockRef = socket.into();
 
-    socket.set_nodelay(true)?;
+    socket.set_tcp_nodelay(true)?;
     socket.set_keepalive(true)?;
     socket.set_linger(Some(Duration::from_secs(1)))?;
 
