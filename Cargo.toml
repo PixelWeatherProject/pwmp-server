@@ -16,36 +16,36 @@ codegen-units = 1
 strip = true
 
 [dependencies]
-pwmp-client = { git = "https://github.com/PixelWeatherProject/pwmp-client.git", tag = "v2.2.0" }
-time = { version = "0.3.37", default-features = false, features = ["macros"] }
-sqlx = { version = "0.8.3", default-features = false, features = [
+pwmp-client = { git = "https://github.com/PixelWeatherProject/pwmp-client.git", tag = "v2.2.1" }
+time = { version = "0.3.47", default-features = false, features = ["macros"] }
+sqlx = { version = "0.8.6", default-features = false, features = [
     "postgres",
     "runtime-tokio",
     "migrate",
     "macros",
     "tls-rustls",
 ] }
-tokio = { version = "1.43.0", default-features = false, features = [
+tokio = { version = "1.50.0", default-features = false, features = [
     "rt-multi-thread",
     "macros",
     "socket2",
     "signal",
 ] }
-confy = { version = "0.6.1", default-features = false, features = [
+confy = { version = "2.0.0", default-features = false, features = [
     "yaml_conf",
 ] }
-homedir = { version = "0.3.4", default-features = false }
-whoami = { version = "1.6.0", default-features = false }
-serde = { version = "1.0.219", features = ["derive"] }
-clap = { version = "4.5.28", features = ["derive"] }
-socket2 = { version = "0.5.8", features = ["all"] }
-tracing-subscriber = "0.3.19"
-iana-time-zone = "0.1.63"
+homedir = { version = "0.3.6", default-features = false }
+whoami = { version = "2.1.1", default-features = false }
+serde = { version = "1.0.228", features = ["derive"] }
+clap = { version = "4.5.60", features = ["derive"] }
+socket2 = { version = "0.6.3", features = ["all"] }
+tracing-subscriber = "0.3.22"
+iana-time-zone = "0.1.65"
 circular-queue = "0.2.7"
 color-print = "0.3.7"
-serde_with = "3.12.0"
-thiserror = "2.0.12"
+serde_with = "3.17.0"
+thiserror = "2.0.18"
 semaphore = "0.4.0"
-tracing = "0.1.41"
-chrono = "0.4.41"
-regex = "1.11.1"
+tracing = "0.1.44"
+chrono = "0.4.44"
+regex = "1.12.3"
