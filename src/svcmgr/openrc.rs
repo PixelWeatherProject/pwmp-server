@@ -108,7 +108,7 @@ impl ServiceManager for Manager {
                 .open(&svcfile_path)?;
 
             let mut svc = include_str!("templates/openrc").to_string();
-            svc = svc.replace("{user}", &whoami::username());
+            svc = svc.replace("{user}", &whoami::username()?);
             svc = svc.replace(
                 "{exec}",
                 &std::env::current_exe().map(|path| path.display().to_string())?,

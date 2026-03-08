@@ -73,4 +73,8 @@ pub enum Error {
     /// Failed to parse a UTF-8 string.
     #[error("Failed to parse a UTF-8 string")]
     StringFromUtf8Bytes(#[from] FromUtf8Error),
+
+    /// Failed to get current username.
+    #[error("Failed to get current username: {0}")]
+    Whoami(#[from] whoami::Error),
 }
