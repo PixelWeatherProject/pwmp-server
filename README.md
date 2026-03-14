@@ -14,14 +14,18 @@ host: "0.0.0.0"
 port: 55300
 
 # Database connection settings.
-# PostgreSQL is the only supported database.
-database:
+# PostgreSQL or SQLite are supported.
+database: !Postgres
   host: "123.456.789.012"
   port: 5432
   user: "root"
   password: "root"
   name: "pixelweather"
   ssl: false
+
+# ... or SQLite:
+database: !Sqlite
+  path: "/path/to/database.db"
 
 limits:
   # Maximum number of devices that can be connected at the same time.
