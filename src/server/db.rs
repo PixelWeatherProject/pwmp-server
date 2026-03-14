@@ -11,7 +11,7 @@ use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
     sqlite::{SqliteConnectOptions, SqlitePoolOptions},
 };
-use std::{fmt::Debug, path::PathBuf};
+use std::path::PathBuf;
 
 pub type NodeId = i32;
 pub type MeasurementId = i32;
@@ -47,7 +47,12 @@ impl DatabaseClient {
         ret
     )]
     pub async fn authorize_device(&self, mac: &Mac) -> Result<Option<NodeId>, Error> {
-        todo!()
+        let mac = mac.to_string();
+
+        match self {
+            Self::Posgres(pool) => _postgres_impl::authorize_device(pool, &mac).await,
+            Self::Sqlite(pool) => _sqlite_impl::authorize_device(pool, &mac).await,
+        }
     }
 
     #[tracing::instrument(
@@ -196,5 +201,36 @@ impl DatabaseClient {
             .await?;
 
         Ok(Self::Sqlite(pool))
+    }
+}
+
+mod _postgres_impl {
+    use crate::{error::Error, server::db::NodeId};
+    use sqlx::{Pool, Postgres};
+
+    pub async fn authorize_device(
+        pool: &Pool<Postgres>,
+        mac: &str,
+    ) -> Result<Option<NodeId>, Error> {
+        Ok(
+            sqlx::query_scalar(include_str!("../../queries/postgres/get_device_by_mac.sql"))
+                .bind(mac)
+                .fetch_optional(pool)
+                .await?,
+        )
+    }
+}
+
+mod _sqlite_impl {
+    use crate::{error::Error, server::db::NodeId};
+    use sqlx::{Pool, Sqlite};
+
+    pub async fn authorize_device(pool: &Pool<Sqlite>, mac: &str) -> Result<Option<NodeId>, Error> {
+        Ok(
+            sqlx::query_scalar("../../queries/sqlite/get_device_by_mac.sql")
+                .bind(mac)
+                .fetch_optional(pool)
+                .await?,
+        )
     }
 }
