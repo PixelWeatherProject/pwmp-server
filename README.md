@@ -44,6 +44,14 @@ rate_limiter:
   max_requests: 4
   # Maximum amount of connections that may be accepted within the specified time frame above.
   max_connections: 4
+
+# Logging configuration
+logging:
+  # Path to the log file, or null to disable
+  file: "/var/log/pwmp-server.log" # or null to disable
+
+  # Whether to erase the log file on start
+  erase_file_on_start: false
 ```
 
 ## Database server

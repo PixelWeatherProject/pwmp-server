@@ -8,6 +8,8 @@ use std::{
     time::Duration,
 };
 
+use crate::error::Error;
+
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Config {
@@ -16,6 +18,7 @@ pub struct Config {
     pub limits: LimitsConfig,
     #[serde(rename = "rate_limiter")]
     pub rate_limits: RateLimitConfig,
+    pub logging: LogConfig,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -49,6 +52,12 @@ pub struct RateLimitConfig {
     pub time_frame: u64,
     pub max_requests: usize,
     pub max_connections: usize,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct LogConfig {
+    pub file: Option<PathBuf>,
+    pub erase_file_on_start: bool,
 }
 
 impl Default for RateLimitConfig {
@@ -105,4 +114,11 @@ impl Config {
     pub const fn server_bind_addr(&self) -> SocketAddrV4 {
         SocketAddrV4::new(self.server.host, self.server.port)
     }
+}
+
+pub fn setup(config_path: &PathBuf) -> Result<(Config, bool), Error> {
+    let first_run = !config_path.exists();
+    let config: Config = confy::load_path(config_path)?;
+
+    Ok((config, first_run))
 }

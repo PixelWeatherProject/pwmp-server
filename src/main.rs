@@ -2,8 +2,7 @@ use clap::Parser;
 use cli::Command;
 use server::config::Config;
 use sqlx::migrate::Migrator;
-use std::process::exit;
-use tracing::{debug, error, info};
+use tracing::{debug, info};
 
 mod cli;
 mod dbmgr;
@@ -18,23 +17,13 @@ pub static MIGRATOR: Migrator = sqlx::migrate!();
 #[tokio::main]
 async fn main() -> Result<(), error::Error> {
     let args = cli::Cli::parse();
+    let config_path = args.config.clone().unwrap_or_else(Config::default_path);
+    let (config, first_run) = server::config::setup(&config_path)?;
 
-    logging::setup(args.debug)?;
+    logging::setup(args.debug, &config)?;
 
     info!("PixelWeather Server v{}", env!("CARGO_PKG_VERSION"));
     debug!("Arguments: {args:?}");
-
-    let config_path = args.config.unwrap_or_else(Config::default_path);
-    info!("Loading config from {}", config_path.display());
-
-    let first_run = !config_path.exists();
-    let config: Config = match confy::load_path(&config_path) {
-        Ok(config) => config,
-        Err(why) => {
-            error!("Failed to load configuration: {why}");
-            exit(1);
-        }
-    };
 
     if first_run {
         info!("Configuration initialized at {}", config_path.display());

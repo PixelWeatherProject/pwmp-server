@@ -77,4 +77,12 @@ pub enum Error {
     /// Failed to get current username.
     #[error("Failed to get current username: {0}")]
     Whoami(#[from] whoami::Error),
+
+    /// Configuration load/store error.
+    #[error("confy: {0}")]
+    Config(#[from] confy::ConfyError),
+
+    /// The log file path is not absolute.
+    #[error("Path to the log file must be absolute")]
+    IllegalLogfilePath,
 }
