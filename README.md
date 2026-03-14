@@ -57,11 +57,14 @@ logging:
 ```
 
 ## Database server
-Only PostgreSQL is supported. It's recommended to use the latest version.
+Only PostgreSQL and SQLite are supported. It's recommended to use the latest version.
 
 Compatibility has been verified with the following versions:
-- 16.x
-- 17.4
+- PostgreSQL
+  - 16.x
+  - 17.4
+- SQLite
+  - 3.52.0
 
 ## Using as a service
 The CLI has a `service` subcommand, which allows managing a background service.
