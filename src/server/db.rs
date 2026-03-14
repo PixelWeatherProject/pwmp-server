@@ -121,7 +121,10 @@ impl DatabaseClient {
         err
     )]
     pub async fn run_migrations(&self) -> Result<(), Error> {
-        todo!()
+        match self {
+            Self::Posgres(pool) => _postgres_impl::run_migrations(pool).await,
+            Self::Sqlite(pool) => _sqlite_impl::run_migrations(pool).await,
+        }
     }
 
     #[tracing::instrument(
@@ -239,6 +242,13 @@ mod _postgres_impl {
         .await?;
         Ok(())
     }
+
+    pub async fn run_migrations(pool: &Pool<Postgres>) -> Result<(), Error> {
+        sqlx::raw_sql(include_str!("../../queries/postgres/migrate.sql"))
+            .execute(pool)
+            .await?;
+        Ok(())
+    }
 }
 
 mod _sqlite_impl {
@@ -262,6 +272,13 @@ mod _sqlite_impl {
         sqlx::query(include_str!("../../queries/sqlite/create_notification.sql"))
             .bind(node_id)
             .bind(content)
+            .execute(pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn run_migrations(pool: &Pool<Sqlite>) -> Result<(), Error> {
+        sqlx::raw_sql(include_str!("../../queries/sqlite/migrate.sql"))
             .execute(pool)
             .await?;
         Ok(())

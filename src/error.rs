@@ -19,10 +19,6 @@ pub enum Error {
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
 
-    /// Database migration error.
-    #[error("Database migration error: {0}")]
-    DatabaseMigration(#[from] sqlx::migrate::MigrateError),
-
     /// Failed to set up the logger.
     #[error("Failed to set global logger")]
     LogInit(#[from] SetGlobalDefaultError),

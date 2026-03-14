@@ -1,7 +1,6 @@
 use clap::Parser;
 use cli::Command;
 use server::config::Config;
-use sqlx::migrate::Migrator;
 use tracing::{debug, info};
 
 mod cli;
@@ -11,8 +10,6 @@ mod logging;
 mod server;
 mod svcmgr;
 mod tester;
-
-pub static MIGRATOR: Migrator = sqlx::migrate!();
 
 #[tokio::main]
 async fn main() -> Result<(), error::Error> {
