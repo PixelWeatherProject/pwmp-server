@@ -1,6 +1,9 @@
 use crate::{
     cli::DatabaseCommand,
-    server::{config::Config, db::DatabaseClient},
+    server::{
+        config::Config,
+        db::{DatabaseBackend, DatabaseClient, EraseOptions},
+    },
 };
 use color_print::cprintln;
 use std::{io::stdin, process::exit};
@@ -44,7 +47,17 @@ pub async fn main(cmd: DatabaseCommand, config: &Config) {
             info!("Connected to the database");
             confirm_erase(&config.database.name(), &config.database.host());
 
-            match client.erase(content_only, keep_devices).await {
+            let opts = if content_only && keep_devices {
+                EraseOptions::ContentOnly { keep_devices: true }
+            } else if content_only {
+                EraseOptions::ContentOnly {
+                    keep_devices: false,
+                }
+            } else {
+                EraseOptions::Everything
+            };
+
+            match client.erase(opts).await {
                 Ok(()) => info!("Success!"),
                 Err(why) => error!("Failed to erase database: {why}"),
             }
