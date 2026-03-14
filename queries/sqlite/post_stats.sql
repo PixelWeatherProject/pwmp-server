@@ -6,4 +6,4 @@ INSERT INTO
         "wifi_rssi"
     )
 VALUES
-    (? 1, ? 2, ? 3, ? 4);
+    (?1, ?2, ?3, ?4);

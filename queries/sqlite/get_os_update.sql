@@ -14,19 +14,19 @@ WHERE
       FROM
         json_each (f.restrict_nodes)
       WHERE
-        value = ? 1
+        value = ?1
     )
   )
   AND (
-    (f.version_major > ? 2)
+    (f.version_major > ?2)
     OR (
-      f.version_major = ? 2
-      AND f.version_middle > ? 3
+      f.version_major = ?2
+      AND f.version_middle > ?3
     )
     OR (
-      f.version_major = ? 2
-      AND f.version_middle = ? 3
-      AND f.version_minor > ? 4
+      f.version_major = ?2
+      AND f.version_middle = ?3
+      AND f.version_minor > ?4
     )
   )
   AND NOT EXISTS (
@@ -35,7 +35,7 @@ WHERE
     FROM
       firmware_stats fs
     WHERE
-      fs.node = ? 1
+      fs.node = ?1
       AND fs.to_version_major = f.version_major
       AND fs.to_version_middle = f.version_middle
       AND fs.to_version_minor = f.version_minor

@@ -1,5 +1,5 @@
 UPDATE firmware_stats
 SET
-  success = ? 2
+  success = ?2
 WHERE
-  id = ? 1;
+  id = ?1;

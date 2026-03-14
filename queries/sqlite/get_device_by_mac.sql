@@ -3,4 +3,4 @@ SELECT
 FROM
     devices
 WHERE
-    mac_address = ? 1;
+    mac_address = ?1;

@@ -7,4 +7,4 @@ SELECT
 FROM
     settings
 WHERE
-    node = ? 1;
+    node = ?1;
