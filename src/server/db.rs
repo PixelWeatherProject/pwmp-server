@@ -62,7 +62,12 @@ impl DatabaseClient {
         err
     )]
     pub async fn create_notification(&self, node_id: NodeId, content: &str) -> Result<(), Error> {
-        todo!()
+        match self {
+            Self::Posgres(pool) => {
+                _postgres_impl::create_notification(pool, node_id, content).await
+            }
+            Self::Sqlite(pool) => _sqlite_impl::create_notification(pool, node_id, content).await,
+        }
     }
 
     #[tracing::instrument(
@@ -219,6 +224,21 @@ mod _postgres_impl {
                 .await?,
         )
     }
+
+    pub async fn create_notification(
+        pool: &Pool<Postgres>,
+        node_id: NodeId,
+        content: &str,
+    ) -> Result<(), Error> {
+        sqlx::query(include_str!(
+            "../../queries/postgres/create_notification.sql"
+        ))
+        .bind(node_id)
+        .bind(content)
+        .execute(pool)
+        .await?;
+        Ok(())
+    }
 }
 
 mod _sqlite_impl {
@@ -227,10 +247,23 @@ mod _sqlite_impl {
 
     pub async fn authorize_device(pool: &Pool<Sqlite>, mac: &str) -> Result<Option<NodeId>, Error> {
         Ok(
-            sqlx::query_scalar("../../queries/sqlite/get_device_by_mac.sql")
+            sqlx::query_scalar(include_str!("../../queries/sqlite/get_device_by_mac.sql"))
                 .bind(mac)
                 .fetch_optional(pool)
                 .await?,
         )
+    }
+
+    pub async fn create_notification(
+        pool: &Pool<Sqlite>,
+        node_id: NodeId,
+        content: &str,
+    ) -> Result<(), Error> {
+        sqlx::query(include_str!("../../queries/sqlite/create_notification.sql"))
+            .bind(node_id)
+            .bind(content)
+            .execute(pool)
+            .await?;
+        Ok(())
     }
 }
