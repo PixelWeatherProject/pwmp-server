@@ -115,6 +115,17 @@ impl DatabaseConfig {
             Self::Sqlite { file } => file.display().to_string(),
         }
     }
+
+    pub fn name(&self) -> String {
+        match self {
+            Self::Postgres { name, .. } => name.to_string(),
+            Self::Sqlite { file } => file
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string(),
+        }
+    }
 }
 
 impl Config {

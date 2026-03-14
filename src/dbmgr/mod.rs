@@ -42,7 +42,7 @@ pub async fn main(cmd: DatabaseCommand, config: &Config) {
             };
 
             info!("Connected to the database");
-            confirm_erase(&config.database.name, &config.database.host);
+            confirm_erase(&config.database.name(), &config.database.host());
 
             match client.erase(content_only, keep_devices).await {
                 Ok(()) => info!("Success!"),
