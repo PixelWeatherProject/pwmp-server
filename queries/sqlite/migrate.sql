@@ -4,13 +4,13 @@ CREATE TABLE
         mac_address TEXT UNIQUE NOT NULL,
         location TEXT DEFAULT NULL,
         note TEXT DEFAULT NULL
-    );
+    ) STRICT;
 
 CREATE TABLE
     measurements (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         node INTEGER NOT NULL REFERENCES devices (id),
-        "when" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "when" TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         temperature REAL NOT NULL CHECK (
             temperature > -100.00
             AND temperature < 100.00
@@ -20,7 +20,7 @@ CREATE TABLE
             AND humidity <= 100
         ),
         air_pressure INTEGER DEFAULT NULL
-    );
+    ) STRICT;
 
 CREATE TABLE
     statistics (
@@ -32,28 +32,28 @@ CREATE TABLE
         ),
         wifi_ssid TEXT NOT NULL,
         wifi_rssi INTEGER NOT NULL
-    );
+    ) STRICT;
 
 CREATE TABLE
     settings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         node INTEGER UNIQUE NOT NULL REFERENCES devices (id),
-        battery_ignore BOOLEAN NOT NULL DEFAULT 0,
-        ota BOOLEAN NOT NULL DEFAULT 0,
+        battery_ignore INTEGER NOT NULL DEFAULT 0,
+        ota INTEGER NOT NULL DEFAULT 0,
         sleep_time INTEGER NOT NULL DEFAULT 60 CHECK (sleep_time > 0),
-        sbop BOOLEAN NOT NULL DEFAULT 1,
-        mute_notifications BOOLEAN NOT NULL DEFAULT 0,
+        sbop INTEGER NOT NULL DEFAULT 1,
+        mute_notifications INTEGER NOT NULL DEFAULT 0,
         device_specific TEXT NOT NULL DEFAULT '{}'
-    );
+    ) STRICT;
 
 CREATE TABLE
     notifications (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         node INTEGER NOT NULL REFERENCES devices (id),
-        "when" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "when" TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         content TEXT NOT NULL,
-        read BOOLEAN NOT NULL DEFAULT 0
-    );
+        read INTEGER NOT NULL DEFAULT 0
+    ) STRICT;
 
 CREATE TABLE
     firmwares (
@@ -62,9 +62,9 @@ CREATE TABLE
         version_middle INTEGER NOT NULL CHECK (version_middle >= 0),
         version_minor INTEGER NOT NULL CHECK (version_minor >= 0),
         firmware BLOB NOT NULL CHECK (length (firmware) > 0),
-        added_date DATETIME UNIQUE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        added_date TEXT UNIQUE NOT NULL DEFAULT CURRENT_TIMESTAMP,
         restrict_nodes TEXT DEFAULT NULL
-    );
+    ) STRICT;
 
 CREATE TABLE
     firmware_stats (
@@ -76,6 +76,6 @@ CREATE TABLE
         to_version_major INTEGER NOT NULL CHECK (to_version_major >= 0),
         to_version_middle INTEGER NOT NULL CHECK (to_version_middle >= 0),
         to_version_minor INTEGER NOT NULL CHECK (to_version_minor >= 0),
-        "when" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        success BOOLEAN DEFAULT NULL
-    );
+        "when" TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        success INTEGER DEFAULT NULL
+    ) STRICT;
