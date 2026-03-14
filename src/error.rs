@@ -59,10 +59,6 @@ pub enum Error {
     #[error("Message is too large to send")]
     MessageTooLarge,
 
-    /// Invalid IANA time zone identifier
-    #[error("Invalid or unsupported time zone: '{0}'")]
-    InvalidTimeZone(String),
-
     #[error("Slice length does not match the expected array length: {0}")]
     ArrayFromSliceSizeMismatch(#[from] TryFromSliceError),
 

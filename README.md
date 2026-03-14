@@ -22,8 +22,6 @@ database:
   password: "root"
   name: "pixelweather"
   ssl: false
-  # Session-specific timezone, leave `null` to use system timezone.
-  timezone: null
 
 limits:
   # Maximum number of devices that can be connected at the same time.

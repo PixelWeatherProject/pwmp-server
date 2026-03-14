@@ -36,7 +36,6 @@ pub enum DatabaseConfig {
         password: Box<str>,
         name: Box<str>,
         ssl: bool,
-        timezone: Option<String>,
     },
     Sqlite {
         file: PathBuf,
@@ -93,7 +92,6 @@ impl Default for DatabaseConfig {
             password: "root".into(),
             name: "pixelweather".into(),
             ssl: false,
-            timezone: None,
         }
     }
 }

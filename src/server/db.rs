@@ -34,7 +34,6 @@ impl DatabaseClient {
                 password,
                 name,
                 ssl,
-                timezone: _,
             } => Self::new_postgres(host, *port, user, password, name, *ssl).await,
             DatabaseConfig::Sqlite { file } => Self::new_sqlite(file).await,
         }
@@ -169,11 +168,11 @@ impl DatabaseClient {
         ssl: bool,
     ) -> Result<Self, Error> {
         let mut opts = PgConnectOptions::new()
-            .host(&host)
+            .host(host)
             .port(port)
-            .username(&user)
-            .password(&password)
-            .database(&name);
+            .username(user)
+            .password(password)
+            .database(name);
 
         if ssl {
             opts = opts.ssl_mode(PgSslMode::Require);

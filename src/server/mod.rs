@@ -6,7 +6,7 @@ use tokio::{
     net::TcpListener,
     signal::unix::{Signal, SignalKind, signal},
 };
-use tracing::{debug, error, info, warn};
+use tracing::{error, info};
 
 mod client;
 mod client_handle;
@@ -27,25 +27,6 @@ pub async fn main(config: Config) {
             exit(1);
         }
     };
-
-    debug!("Setting timezone");
-    match config
-        .database
-        .timezone
-        .clone()
-        .or_else(|| iana_time_zone::get_timezone().ok())
-    {
-        Some(tz) => match db.setup_timezone(&tz).await {
-            Ok(()) => info!("Timezone updated to \"{tz}\" successfully"),
-            Err(why) => {
-                error!("Failed to set time zone: {why}");
-                warn!("Keeping timezone unset, timestamps may have unexpected values");
-            }
-        },
-        None => {
-            warn!("Cannot determine system time zone, skipping");
-        }
-    }
 
     let server = match TcpListener::bind(config.server_bind_addr()).await {
         Ok(socket) => socket,
