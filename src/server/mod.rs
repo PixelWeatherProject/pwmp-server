@@ -19,7 +19,7 @@ pub mod rate_limit;
 pub async fn main(config: Config) {
     let config = Arc::new(config);
 
-    info!("Connecting to database at \"{}\"", config.database.host);
+    info!("Connecting to database at \"{}\"", config.database.host());
     let db = match DatabaseClient::new(&config).await {
         Ok(db) => db,
         Err(why) => {

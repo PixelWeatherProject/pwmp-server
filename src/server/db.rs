@@ -1,5 +1,5 @@
 use super::config::Config;
-use crate::error::Error;
+use crate::{error::Error, server::config::DatabaseConfig};
 use pwmp_client::pwmp_msg::{
     aliases::{AirPressure, BatteryVoltage, Humidity, Rssi, Temperature},
     mac::Mac,
@@ -7,62 +7,37 @@ use pwmp_client::pwmp_msg::{
     version::Version,
 };
 use sqlx::{
-    Pool, Postgres,
+    Pool, Postgres, Sqlite,
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
+    sqlite::{SqliteConnectOptions, SqlitePoolOptions},
 };
-use std::fmt::Debug;
+use std::{fmt::Debug, path::PathBuf};
 
 pub type NodeId = i32;
 pub type MeasurementId = i32;
 pub type FirmwareBlob = Box<[u8]>;
 pub type UpdateStatId = i32;
 
-pub struct DatabaseClient(Pool<Postgres>);
-
-macro_rules! query {
-    ($pool: expr, $qfile: literal, $method: ident, $($bindings: tt)*) => {
-        sqlx::query_file!($qfile, $($bindings)*).$method(&$pool).await
-    };
+pub enum DatabaseClient {
+    Posgres(Pool<Postgres>),
+    Sqlite(Pool<Sqlite>),
 }
 
 impl DatabaseClient {
     #[tracing::instrument(name = "DatabaseClient::init()", level = "debug", err, skip_all)]
     pub async fn new(config: &Config) -> Result<Self, Error> {
-        let mut opts = PgConnectOptions::new()
-            .host(&config.database.host)
-            .port(config.database.port)
-            .username(&config.database.user)
-            .password(&config.database.password)
-            .database(&config.database.name);
-
-        if config.database.ssl {
-            opts = opts.ssl_mode(PgSslMode::Require);
+        match &config.database {
+            DatabaseConfig::Postgres {
+                host,
+                port,
+                user,
+                password,
+                name,
+                ssl,
+                timezone: _,
+            } => Self::new_postgres(host, *port, user, password, name, *ssl).await,
+            DatabaseConfig::Sqlite { file } => Self::new_sqlite(file).await,
         }
-
-        let pool = PgPoolOptions::new()
-            .max_connections(3)
-            .connect_with(opts)
-            .await?;
-
-        Ok(Self(pool))
-    }
-
-    #[tracing::instrument(
-        name = "DatabaseClient::setup_timezone()",
-        level = "debug",
-        skip(self),
-        err
-    )]
-    pub async fn setup_timezone(&self, tz: &str) -> Result<(), Error> {
-        if !self.validate_timezone(tz).await? {
-            return Err(Error::InvalidTimeZone(tz.into()));
-        }
-
-        // This query needs to be dynamically generated.
-        let sql = format!("SET TIME ZONE \"{tz}\"");
-        sqlx::query(&sql).execute(&self.0).await?;
-
-        Ok(())
     }
 
     #[tracing::instrument(
@@ -73,14 +48,7 @@ impl DatabaseClient {
         ret
     )]
     pub async fn authorize_device(&self, mac: &Mac) -> Result<Option<NodeId>, Error> {
-        let mac = mac.to_string();
-
-        let result = query!(self.0, "queries/get_device_by_mac.sql", fetch_one, mac);
-        match result {
-            Ok(res) => Ok(Some(res.id)),
-            Err(sqlx::Error::RowNotFound) => Ok(None),
-            Err(why) => Err(Error::Database(why)),
-        }
+        todo!()
     }
 
     #[tracing::instrument(
@@ -90,15 +58,7 @@ impl DatabaseClient {
         err
     )]
     pub async fn create_notification(&self, node_id: NodeId, content: &str) -> Result<(), Error> {
-        query!(
-            self.0,
-            "queries/create_notification.sql",
-            execute,
-            node_id,
-            content,
-        )?;
-
-        Ok(())
+        todo!()
     }
 
     #[tracing::instrument(
@@ -109,24 +69,7 @@ impl DatabaseClient {
         ret
     )]
     pub async fn get_settings(&self, node_id: NodeId) -> Result<Option<NodeSettings>, Error> {
-        let result = query!(
-            self.0,
-            "queries/get_device_settings.sql",
-            fetch_one,
-            node_id
-        );
-
-        match result {
-            Ok(record) => Ok(Some(NodeSettings {
-                battery_ignore: record.battery_ignore,
-                ota: record.ota,
-                sleep_time: record.sleep_time.try_into()?,
-                sbop: record.sbop,
-                mute_notifications: record.mute_notifications,
-            })),
-            Err(sqlx::error::Error::RowNotFound) => Ok(None),
-            Err(why) => Err(why.into()),
-        }
+        todo!()
     }
 
     #[tracing::instrument(
@@ -143,22 +86,7 @@ impl DatabaseClient {
         hum: Humidity,
         air_p: Option<AirPressure>,
     ) -> Result<MeasurementId, Error> {
-        let signed_air_p: Option<i16> = match air_p {
-            Some(value) => Some(value.try_into()?),
-            None => None,
-        };
-
-        let result = query!(
-            self.0,
-            "queries/post_results.sql",
-            fetch_one,
-            node,
-            temp,
-            i16::from(hum),
-            signed_air_p
-        )?;
-
-        Ok(result.id)
+        todo!()
     }
 
     #[tracing::instrument(
@@ -174,17 +102,7 @@ impl DatabaseClient {
         wifi_ssid: &str,
         wifi_rssi: Rssi,
     ) -> Result<(), Error> {
-        query!(
-            self.0,
-            "queries/post_stats.sql",
-            execute,
-            measurement,
-            battery,
-            wifi_ssid,
-            i16::from(wifi_rssi)
-        )?;
-
-        Ok(())
+        todo!()
     }
 
     #[tracing::instrument(
@@ -194,9 +112,7 @@ impl DatabaseClient {
         err
     )]
     pub async fn run_migrations(&self) -> Result<(), Error> {
-        crate::MIGRATOR.run(&self.0).await?;
-
-        Ok(())
+        todo!()
     }
 
     #[tracing::instrument(
@@ -210,30 +126,7 @@ impl DatabaseClient {
         node: NodeId,
         current_ver: Version,
     ) -> Result<Option<(Version, FirmwareBlob)>, Error> {
-        let (version_major, version_middle, version_minor) = current_ver.to_signed_triple();
-        let result = query!(
-            self.0,
-            "queries/get_os_update.sql",
-            fetch_one,
-            node,
-            version_major,
-            version_middle,
-            version_minor
-        );
-
-        match result {
-            Ok(update_info) => {
-                let version = Version::new(
-                    update_info.version_major.try_into()?,
-                    update_info.version_middle.try_into()?,
-                    update_info.version_minor.try_into()?,
-                );
-
-                Ok(Some((version, update_info.firmware.into_boxed_slice())))
-            }
-            Err(sqlx::Error::RowNotFound) => Ok(None),
-            Err(why) => Err(Error::Database(why)),
-        }
+        todo!()
     }
 
     #[tracing::instrument(
@@ -249,23 +142,7 @@ impl DatabaseClient {
         old_ver: Version,
         new_ver: Version,
     ) -> Result<UpdateStatId, Error> {
-        let (old_version_major, old_version_middle, old_version_minor) = old_ver.to_signed_triple();
-        let (new_version_major, new_version_middle, new_version_minor) = new_ver.to_signed_triple();
-
-        let result = query!(
-            self.0,
-            "queries/send_os_update_event.sql",
-            fetch_one,
-            node_id,
-            old_version_major,
-            old_version_middle,
-            old_version_minor,
-            new_version_major,
-            new_version_middle,
-            new_version_minor
-        )?;
-
-        Ok(result.id)
+        todo!()
     }
 
     #[tracing::instrument(
@@ -275,88 +152,50 @@ impl DatabaseClient {
         err
     )]
     pub async fn mark_os_update_stat(&self, node_id: NodeId, success: bool) -> Result<(), Error> {
-        let last_update_id = self.get_last_os_update_stat(node_id).await?;
-        query!(
-            self.0,
-            "queries/update_os_update_event.sql",
-            execute,
-            last_update_id,
-            success
-        )?;
-
-        Ok(())
+        todo!()
     }
 
     #[tracing::instrument(name = "DatabaseClient::erase()", level = "debug", skip(self), err)]
     pub async fn erase(&self, content_only: bool, keep_devices: bool) -> Result<(), Error> {
-        if content_only {
-            if keep_devices {
-                query!(
-                    self.0,
-                    "queries/erase_database_content_keep_devices_and_settings.sql",
-                    execute,
-                )?;
-            } else {
-                query!(self.0, "queries/erase_database_content.sql", execute,)?;
-            }
+        todo!()
+    }
 
-            query!(self.0, "queries/drop_migrations_table.sql", execute,)?;
-        } else if keep_devices {
-            query!(
-                self.0,
-                "queries/erase_database_content_keep_devices_and_settings.sql",
-                execute,
-            )?;
-        } else {
-            query!(self.0, "queries/erase_database.sql", execute,)?;
+    async fn new_postgres(
+        host: &str,
+        port: u16,
+        user: &str,
+        password: &str,
+        name: &str,
+        ssl: bool,
+    ) -> Result<Self, Error> {
+        let mut opts = PgConnectOptions::new()
+            .host(&host)
+            .port(port)
+            .username(&user)
+            .password(&password)
+            .database(&name);
+
+        if ssl {
+            opts = opts.ssl_mode(PgSslMode::Require);
         }
 
-        Ok(())
+        let pool = PgPoolOptions::new()
+            .max_connections(3)
+            .connect_with(opts)
+            .await?;
+
+        Ok(Self::Posgres(pool))
     }
 
-    #[tracing::instrument(
-        name = "DatabaseClient::get_last_os_update_stat()",
-        level = "debug",
-        skip(self),
-        err,
-        ret
-    )]
-    async fn get_last_os_update_stat(&self, node_id: NodeId) -> Result<UpdateStatId, Error> {
-        Ok(query!(
-            self.0,
-            "queries/get_last_update_event.sql",
-            fetch_one,
-            node_id
-        )?
-        .id)
-    }
+    async fn new_sqlite(path: &PathBuf) -> Result<Self, Error> {
+        let opts = SqliteConnectOptions::new()
+            .filename(path)
+            .create_if_missing(true);
+        let pool = SqlitePoolOptions::new()
+            .max_connections(3)
+            .connect_with(opts)
+            .await?;
 
-    #[tracing::instrument(
-        name = "DatabaseClient::get_supported_time_zones()",
-        level = "debug",
-        skip(self),
-        err
-    )]
-    async fn get_supported_time_zones(&self) -> Result<Vec<String>, Error> {
-        let results = query!(self.0, "queries/get_tz_names.sql", fetch_all,)?;
-        let names: Vec<String> = results
-            .into_iter()
-            .filter_map(|record| record.name)
-            .collect();
-
-        Ok(names)
-    }
-
-    #[tracing::instrument(
-        name = "DatabaseClient::validate_timezone()",
-        level = "debug",
-        skip(self, tz),
-        err,
-        ret /* this will print `tz` too */
-    )]
-    async fn validate_timezone<S: PartialEq<String> + Debug>(&self, tz: S) -> Result<bool, Error> {
-        let supported = self.get_supported_time_zones().await?;
-
-        Ok(supported.iter().any(|candidate| tz.eq(candidate)))
+        Ok(Self::Sqlite(pool))
     }
 }

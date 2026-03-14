@@ -108,6 +108,15 @@ impl Default for LimitsConfig {
     }
 }
 
+impl DatabaseConfig {
+    pub fn host(&self) -> String {
+        match self {
+            Self::Postgres { host, .. } => host.to_string(),
+            Self::Sqlite { file } => file.display().to_string(),
+        }
+    }
+}
+
 impl Config {
     pub fn default_path() -> PathBuf {
         homedir::my_home()
