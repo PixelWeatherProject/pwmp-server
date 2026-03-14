@@ -15,6 +15,7 @@ use std::path::PathBuf;
 pub struct SqliteClient(Pool<Sqlite>);
 
 impl SqliteClient {
+    #[tracing::instrument(name = "SqliteClient::new()", level = "debug", err, skip_all)]
     pub async fn new(path: &PathBuf) -> Result<Self, Error> {
         let opts = SqliteConnectOptions::new()
             .filename(path)
@@ -44,6 +45,13 @@ impl SqliteClient {
 }
 
 impl super::DatabaseBackend for SqliteClient {
+    #[tracing::instrument(
+        name = "SqliteClient::authorize_device()",
+        level = "debug",
+        skip(self),
+        err,
+        ret
+    )]
     async fn authorize_device(&self, mac: &Mac) -> Result<Option<NodeId>, Error> {
         let mac = mac.to_string();
 
@@ -57,6 +65,12 @@ impl super::DatabaseBackend for SqliteClient {
         Ok(id)
     }
 
+    #[tracing::instrument(
+        name = "SqliteClient::create_notification()",
+        level = "debug",
+        skip(self),
+        err
+    )]
     async fn create_notification(&self, node_id: NodeId, content: &str) -> Result<(), Error> {
         sqlx::query(include_str!(
             "../../../queries/sqlite/create_notification.sql"
@@ -68,6 +82,13 @@ impl super::DatabaseBackend for SqliteClient {
         Ok(())
     }
 
+    #[tracing::instrument(
+        name = "SqliteClient::get_settings()",
+        level = "debug",
+        skip(self),
+        err,
+        ret
+    )]
     async fn get_settings(&self, node_id: NodeId) -> Result<Option<NodeSettings>, Error> {
         let result = sqlx::query(include_str!(
             "../../../queries/sqlite/get_device_settings.sql"
@@ -90,6 +111,13 @@ impl super::DatabaseBackend for SqliteClient {
         Ok(result)
     }
 
+    #[tracing::instrument(
+        name = "SqliteClient::post_results()",
+        level = "debug",
+        skip(self),
+        err,
+        ret
+    )]
     async fn post_results(
         &self,
         node: NodeId,
@@ -108,6 +136,7 @@ impl super::DatabaseBackend for SqliteClient {
         Ok(result)
     }
 
+    #[tracing::instrument(name = "SqliteClient::post_stats()", level = "debug", skip(self), err)]
     async fn post_stats(
         &self,
         measurement: MeasurementId,
@@ -125,6 +154,12 @@ impl super::DatabaseBackend for SqliteClient {
         Ok(())
     }
 
+    #[tracing::instrument(
+        name = "SqliteClient::run_migrations()",
+        level = "debug",
+        skip(self),
+        err
+    )]
     async fn run_migrations(&self) -> Result<(), Error> {
         sqlx::raw_sql(include_str!("../../../queries/sqlite/migrate.sql"))
             .execute(&self.0)
@@ -132,6 +167,12 @@ impl super::DatabaseBackend for SqliteClient {
         Ok(())
     }
 
+    #[tracing::instrument(
+        name = "SqliteClient::check_os_update()",
+        level = "debug",
+        skip(self),
+        err
+    )]
     async fn check_os_update(
         &self,
         node: NodeId,
@@ -161,6 +202,13 @@ impl super::DatabaseBackend for SqliteClient {
         }
     }
 
+    #[tracing::instrument(
+        name = "SqliteClient::send_os_update_stat()",
+        level = "debug",
+        skip(self),
+        err,
+        ret
+    )]
     async fn send_os_update_stat(
         &self,
         node_id: NodeId,
@@ -186,6 +234,12 @@ impl super::DatabaseBackend for SqliteClient {
         Ok(result)
     }
 
+    #[tracing::instrument(
+        name = "SqliteClient::mark_os_update_stat()",
+        level = "debug",
+        skip(self),
+        err
+    )]
     async fn mark_os_update_stat(&self, node_id: NodeId, success: bool) -> Result<(), Error> {
         let update_stat_id = self.get_last_os_update_stat_for_node(node_id).await?;
 
@@ -200,6 +254,7 @@ impl super::DatabaseBackend for SqliteClient {
         Ok(())
     }
 
+    #[tracing::instrument(name = "SqliteClient::erase()", level = "debug", skip(self), err)]
     async fn erase(&self, options: EraseOptions) -> Result<(), Error> {
         let sql = match options {
             EraseOptions::Everything => {
