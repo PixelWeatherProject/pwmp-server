@@ -78,7 +78,10 @@ impl DatabaseClient {
         ret
     )]
     pub async fn get_settings(&self, node_id: NodeId) -> Result<Option<NodeSettings>, Error> {
-        todo!()
+        match self {
+            Self::Posgres(pool) => _postgres_impl::get_settings(pool, node_id).await,
+            Self::Sqlite(pool) => _sqlite_impl::get_settings(pool, node_id).await,
+        }
     }
 
     #[tracing::instrument(
@@ -95,7 +98,10 @@ impl DatabaseClient {
         hum: Humidity,
         air_p: Option<AirPressure>,
     ) -> Result<MeasurementId, Error> {
-        todo!()
+        match self {
+            Self::Posgres(pool) => _postgres_impl::post_results(pool, node, temp, hum, air_p).await,
+            Self::Sqlite(pool) => _sqlite_impl::post_results(pool, node, temp, hum, air_p).await,
+        }
     }
 
     #[tracing::instrument(
@@ -111,7 +117,14 @@ impl DatabaseClient {
         wifi_ssid: &str,
         wifi_rssi: Rssi,
     ) -> Result<(), Error> {
-        todo!()
+        match self {
+            Self::Posgres(pool) => {
+                _postgres_impl::post_stats(pool, measurement, battery, wifi_ssid, wifi_rssi).await
+            }
+            Self::Sqlite(pool) => {
+                _sqlite_impl::post_stats(pool, measurement, battery, wifi_ssid, wifi_rssi).await
+            }
+        }
     }
 
     #[tracing::instrument(
@@ -138,7 +151,10 @@ impl DatabaseClient {
         node: NodeId,
         current_ver: Version,
     ) -> Result<Option<(Version, FirmwareBlob)>, Error> {
-        todo!()
+        match self {
+            Self::Posgres(pool) => _postgres_impl::check_os_update(pool, node, current_ver).await,
+            Self::Sqlite(pool) => _sqlite_impl::check_os_update(pool, node, current_ver).await,
+        }
     }
 
     #[tracing::instrument(
@@ -154,7 +170,14 @@ impl DatabaseClient {
         old_ver: Version,
         new_ver: Version,
     ) -> Result<UpdateStatId, Error> {
-        todo!()
+        match self {
+            Self::Posgres(pool) => {
+                _postgres_impl::send_os_update_stat(pool, node_id, old_ver, new_ver).await
+            }
+            Self::Sqlite(pool) => {
+                _sqlite_impl::send_os_update_stat(pool, node_id, old_ver, new_ver).await
+            }
+        }
     }
 
     #[tracing::instrument(
@@ -164,12 +187,20 @@ impl DatabaseClient {
         err
     )]
     pub async fn mark_os_update_stat(&self, node_id: NodeId, success: bool) -> Result<(), Error> {
-        todo!()
+        match self {
+            Self::Posgres(pool) => {
+                _postgres_impl::mark_os_update_stat(pool, node_id, success).await
+            }
+            Self::Sqlite(pool) => _sqlite_impl::mark_os_update_stat(pool, node_id, success).await,
+        }
     }
 
     #[tracing::instrument(name = "DatabaseClient::erase()", level = "debug", skip(self), err)]
     pub async fn erase(&self, content_only: bool, keep_devices: bool) -> Result<(), Error> {
-        todo!()
+        match self {
+            Self::Posgres(pool) => _postgres_impl::erase(pool, content_only, keep_devices).await,
+            Self::Sqlite(pool) => _sqlite_impl::erase(pool, content_only, keep_devices).await,
+        }
     }
 
     async fn new_postgres(
@@ -213,8 +244,16 @@ impl DatabaseClient {
 }
 
 mod _postgres_impl {
-    use crate::{error::Error, server::db::NodeId};
-    use sqlx::{Pool, Postgres};
+    use crate::{
+        error::Error,
+        server::db::{FirmwareBlob, MeasurementId, NodeId, UpdateStatId},
+    };
+    use pwmp_client::pwmp_msg::{
+        aliases::{AirPressure, BatteryVoltage, Humidity, Rssi, Temperature},
+        settings::NodeSettings,
+        version::Version,
+    };
+    use sqlx::{Pool, Postgres, Row};
 
     pub async fn authorize_device(
         pool: &Pool<Postgres>,
@@ -243,17 +282,160 @@ mod _postgres_impl {
         Ok(())
     }
 
+    pub async fn get_settings(
+        pool: &Pool<Postgres>,
+        node_id: NodeId,
+    ) -> Result<Option<NodeSettings>, Error> {
+        let result = sqlx::query(include_str!(
+            "../../queries/postgres/get_device_settings.sql"
+        ))
+        .bind(node_id)
+        .fetch_optional(pool)
+        .await?;
+
+        let result = match result {
+            Some(row) => Some(NodeSettings {
+                battery_ignore: row.get(0),
+                ota: row.get(1),
+                sleep_time: row.get::<i32, _>(2).try_into()?,
+                sbop: row.get(3),
+                mute_notifications: row.get(4),
+            }),
+            None => None,
+        };
+
+        Ok(result)
+    }
+
+    pub async fn post_results(
+        pool: &Pool<Postgres>,
+        node: NodeId,
+        temp: Temperature,
+        hum: Humidity,
+        air_p: Option<AirPressure>,
+    ) -> Result<MeasurementId, Error> {
+        let signed_air_p: Option<i16> = match air_p {
+            Some(value) => Some(value.try_into()?),
+            None => None,
+        };
+
+        let result = sqlx::query_scalar(include_str!("../../queries/postgres/post_results.sql"))
+            .bind(node)
+            .bind(temp)
+            .bind(i16::from(hum))
+            .bind(signed_air_p)
+            .fetch_one(pool)
+            .await?;
+
+        Ok(result)
+    }
+
+    pub async fn post_stats(
+        pool: &Pool<Postgres>,
+        measurement: MeasurementId,
+        battery: BatteryVoltage,
+        wifi_ssid: &str,
+        wifi_rssi: Rssi,
+    ) -> Result<(), Error> {
+        sqlx::query(include_str!("../../queries/postgres/post_stats.sql"))
+            .bind(measurement)
+            .bind(battery)
+            .bind(wifi_ssid)
+            .bind(i16::from(wifi_rssi))
+            .execute(pool)
+            .await?;
+        Ok(())
+    }
+
     pub async fn run_migrations(pool: &Pool<Postgres>) -> Result<(), Error> {
         sqlx::raw_sql(include_str!("../../queries/postgres/migrate.sql"))
             .execute(pool)
             .await?;
         Ok(())
     }
+
+    pub async fn check_os_update(
+        pool: &Pool<Postgres>,
+        node: NodeId,
+        current_ver: Version,
+    ) -> Result<Option<(Version, FirmwareBlob)>, Error> {
+        let (version_major, version_middle, version_minor) = current_ver.to_signed_triple();
+
+        let result = sqlx::query(include_str!("../../queries/postgres/get_os_update.sql"))
+            .bind(node)
+            .bind(version_major)
+            .bind(version_middle)
+            .bind(version_minor)
+            .fetch_optional(pool)
+            .await?;
+
+        match result {
+            Some(row) => {
+                let new_version = Version::new(
+                    row.get::<i8, _>(0).try_into()?,
+                    row.get::<i8, _>(1).try_into()?,
+                    row.get::<i8, _>(3).try_into()?,
+                );
+                let blob = row.get::<Vec<u8>, _>(3).into_boxed_slice();
+                Ok(Some((new_version, blob)))
+            }
+            None => Ok(None),
+        }
+    }
+
+    pub async fn send_os_update_stat(
+        pool: &Pool<Postgres>,
+        node_id: NodeId,
+        old_ver: Version,
+        new_ver: Version,
+    ) -> Result<UpdateStatId, Error> {
+        let (old_version_major, old_version_middle, old_version_minor) = old_ver.to_signed_triple();
+        let (new_version_major, new_version_middle, new_version_minor) = new_ver.to_signed_triple();
+
+        let result = sqlx::query_scalar(include_str!(
+            "../../queries/postgres/send_os_update_event.sql"
+        ))
+        .bind(node_id)
+        .bind(old_version_major)
+        .bind(old_version_middle)
+        .bind(old_version_minor)
+        .bind(new_version_major)
+        .bind(new_version_middle)
+        .bind(new_version_minor)
+        .fetch_one(pool)
+        .await?;
+
+        Ok(result)
+    }
+
+    pub async fn mark_os_update_stat(
+        pool: &Pool<Postgres>,
+        node_id: NodeId,
+        success: bool,
+    ) -> Result<(), Error> {
+        todo!()
+    }
+
+    pub async fn erase(
+        pool: &Pool<Postgres>,
+        content_only: bool,
+        keep_devices: bool,
+    ) -> Result<(), Error> {
+        todo!()
+    }
 }
 
 mod _sqlite_impl {
-    use crate::{error::Error, server::db::NodeId};
-    use sqlx::{Pool, Sqlite};
+    use crate::{
+        error::Error,
+        server::db::{FirmwareBlob, MeasurementId, NodeId, UpdateStatId},
+    };
+    use pwmp_client::pwmp_msg::{
+        aliases::{AirPressure, BatteryVoltage, Humidity, Rssi, Temperature},
+        settings::NodeSettings,
+        version::Version,
+    };
+    use sqlx::{Pool, Row, Sqlite};
 
     pub async fn authorize_device(pool: &Pool<Sqlite>, mac: &str) -> Result<Option<NodeId>, Error> {
         Ok(
@@ -277,10 +459,101 @@ mod _sqlite_impl {
         Ok(())
     }
 
+    pub async fn get_settings(
+        pool: &Pool<Sqlite>,
+        node_id: NodeId,
+    ) -> Result<Option<NodeSettings>, Error> {
+        let result = sqlx::query(include_str!("../../queries/sqlite/get_device_settings.sql"))
+            .bind(node_id)
+            .fetch_optional(pool)
+            .await?;
+
+        let result = match result {
+            Some(row) => Some(NodeSettings {
+                battery_ignore: row.get(0),
+                ota: row.get(1),
+                sleep_time: row.get::<i32, _>(2).try_into()?,
+                sbop: row.get(3),
+                mute_notifications: row.get(4),
+            }),
+            None => None,
+        };
+
+        Ok(result)
+    }
+
+    pub async fn post_results(
+        pool: &Pool<Sqlite>,
+        node: NodeId,
+        temp: Temperature,
+        hum: Humidity,
+        air_p: Option<AirPressure>,
+    ) -> Result<MeasurementId, Error> {
+        let result = sqlx::query_scalar(include_str!("../../queries/sqlite/post_results.sql"))
+            .bind(node)
+            .bind(temp)
+            .bind(hum)
+            .bind(air_p)
+            .fetch_one(pool)
+            .await?;
+
+        Ok(result)
+    }
+
+    pub async fn post_stats(
+        pool: &Pool<Sqlite>,
+        measurement: MeasurementId,
+        battery: BatteryVoltage,
+        wifi_ssid: &str,
+        wifi_rssi: Rssi,
+    ) -> Result<(), Error> {
+        sqlx::query(include_str!("../../queries/sqlite/post_stats.sql"))
+            .bind(measurement)
+            .bind(battery)
+            .bind(wifi_ssid)
+            .bind(wifi_rssi)
+            .execute(pool)
+            .await?;
+        Ok(())
+    }
+
     pub async fn run_migrations(pool: &Pool<Sqlite>) -> Result<(), Error> {
         sqlx::raw_sql(include_str!("../../queries/sqlite/migrate.sql"))
             .execute(pool)
             .await?;
         Ok(())
+    }
+
+    pub async fn check_os_update(
+        pool: &Pool<Sqlite>,
+        node: NodeId,
+        current_ver: Version,
+    ) -> Result<Option<(Version, FirmwareBlob)>, Error> {
+        todo!()
+    }
+
+    pub async fn send_os_update_stat(
+        pool: &Pool<Sqlite>,
+        node_id: NodeId,
+        old_ver: Version,
+        new_ver: Version,
+    ) -> Result<UpdateStatId, Error> {
+        todo!()
+    }
+
+    pub async fn mark_os_update_stat(
+        pool: &Pool<Sqlite>,
+        node_id: NodeId,
+        success: bool,
+    ) -> Result<(), Error> {
+        todo!()
+    }
+
+    pub async fn erase(
+        pool: &Pool<Sqlite>,
+        content_only: bool,
+        keep_devices: bool,
+    ) -> Result<(), Error> {
+        todo!()
     }
 }
