@@ -22,7 +22,6 @@ sqlx = { version = "0.8.6", default-features = false, features = [
     "postgres",
     "runtime-tokio",
     "sqlite",
-    "macros",
     "tls-rustls",
 ] }
 tokio = { version = "1.50.0", default-features = false, features = [
