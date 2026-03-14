@@ -28,14 +28,19 @@ pub struct ServerConfig {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct DatabaseConfig {
-    pub host: Box<str>,
-    pub port: u16,
-    pub user: Box<str>,
-    pub password: Box<str>,
-    pub name: Box<str>,
-    pub ssl: bool,
-    pub timezone: Option<String>,
+pub enum DatabaseConfig {
+    Postgres {
+        host: Box<str>,
+        port: u16,
+        user: Box<str>,
+        password: Box<str>,
+        name: Box<str>,
+        ssl: bool,
+        timezone: Option<String>,
+    },
+    Sqlite {
+        file: PathBuf,
+    },
 }
 
 #[serde_as]
@@ -81,7 +86,7 @@ impl Default for ServerConfig {
 
 impl Default for DatabaseConfig {
     fn default() -> Self {
-        Self {
+        Self::Postgres {
             host: "192.168.0.12".into(),
             port: 5432,
             user: "root".into(),
