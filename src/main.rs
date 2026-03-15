@@ -17,7 +17,10 @@ async fn main() -> Result<(), error::Error> {
     let config_path = args.config.clone().unwrap_or_else(Config::default_path);
     let (config, first_run) = server::config::setup(&config_path)?;
 
-    logging::setup(args.debug, &config)?;
+    if let Err(why) = logging::setup(args.debug, &config) {
+        eprintln!("Failed to set up logging: {why}");
+        return Err(why);
+    }
 
     info!("PixelWeather Server v{}", env!("CARGO_PKG_VERSION"));
     debug!("Arguments: {args:?}");
