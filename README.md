@@ -25,6 +25,7 @@ database: !Postgres
 
 # ... or SQLite:
 database: !Sqlite
+  # Path must be absolute
   path: "/path/to/database.db"
 
 limits:
@@ -50,6 +51,7 @@ rate_limiter:
 # Logging configuration
 logging:
   # Path to the log file, or null to disable
+  # Path must be absolute
   file: "/var/log/pwmp-server.log" # or null to disable
 
   # Whether to erase the log file on start
