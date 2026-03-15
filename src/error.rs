@@ -77,4 +77,9 @@ pub enum Error {
     /// The log file path is not absolute.
     #[error("Path to the log file must be absolute")]
     IllegalLogfilePath,
+
+    #[allow(clippy::doc_markdown)]
+    /// The SQLite database file path is not absolute.
+    #[error("Path to the SQLite database must be absolute")]
+    IllegalSqlitePath,
 }

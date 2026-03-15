@@ -17,6 +17,10 @@ pub struct SqliteClient(Pool<Sqlite>);
 impl SqliteClient {
     #[tracing::instrument(name = "SqliteClient::new()", level = "debug", err, skip_all)]
     pub async fn new(path: &PathBuf) -> Result<Self, Error> {
+        if !path.is_absolute() {
+            return Err(Error::IllegalSqlitePath);
+        }
+
         let opts = SqliteConnectOptions::new()
             .filename(path)
             .create_if_missing(true);
