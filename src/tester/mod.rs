@@ -1,4 +1,3 @@
-use tracing::{debug, error, info};
 use pwmp_client::{
     PwmpClient,
     ota::UpdateStatus,
@@ -10,6 +9,7 @@ use std::{
     sync::atomic::{AtomicU32, Ordering},
     time::Instant,
 };
+use tracing::{debug, error, info};
 
 static COUNTER: AtomicU32 = AtomicU32::new(1);
 
@@ -39,6 +39,7 @@ pub fn test(host: String, port: Option<u16>, raw_mac: String) {
     info!("Performing handshake");
     if let Err(why) = client.perform_handshake(mac) {
         error!("Handshake failed: {why}");
+        exit(1);
     }
 
     debug!("Pinging");
