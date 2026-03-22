@@ -10,6 +10,8 @@ Restart=on-failure
 RestartSec=5
 User={user}
 ExecStart={exec}
+StandardOutput=append:/var/log/pwmp-server-stdout.log
+StandardError=append:/var/logs/pwmp-server-stderr.log
 
 [Install]
 WantedBy=multi-user.target
