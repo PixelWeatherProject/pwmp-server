@@ -26,7 +26,7 @@ database: !Postgres
 # ... or SQLite:
 database: !Sqlite
   # Path must be absolute
-  path: "/path/to/database.db"
+  file: "/path/to/database.db"
 
 limits:
   # Maximum number of devices that can be connected at the same time.
