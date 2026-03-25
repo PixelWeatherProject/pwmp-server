@@ -34,7 +34,7 @@ async fn main() -> Result<(), error::Error> {
 
     match args.command {
         Some(Command::Service { command }) => svcmgr::main(command),
-        Some(Command::WebApi) => webapi::start(&config)?,
+        Some(Command::WebApi) => webapi::start(&config).await?,
         Some(Command::Database { command }) => dbmgr::main(command, &config).await,
         Some(Command::Test { host, mac, port }) => tester::test(host, port, mac),
         None => server::main(config).await,
