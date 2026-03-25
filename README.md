@@ -135,7 +135,7 @@ docker build -t pwmp-server .
 You can test the container using the following command:
 ```sh
 # Note that the config already exists on the host!
-docker run --rm -it -v ~/.pwmp-server:/config:ro pwmp-server
+docker run --rm -it -v ~/.pwmp-server:/app/data:ro pwmp-server
 ```
 
 ## Proxies
