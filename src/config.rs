@@ -11,7 +11,7 @@ use std::{
 use crate::error::Error;
 
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct Config {
     pub server: ServerConfig,
     pub webapi: WebApiConfig,
@@ -22,20 +22,20 @@ pub struct Config {
     pub logging: LogConfig,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ServerConfig {
     pub host: Ipv4Addr,
     pub port: u16,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct WebApiConfig {
-    ip: Ipv4Addr,
-    port: u16,
-    auth_key: Box<str>,
+    pub ip: Ipv4Addr,
+    pub port: u16,
+    pub auth_key: Box<str>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum DatabaseConfig {
     Postgres {
         host: Box<str>,
@@ -51,7 +51,7 @@ pub enum DatabaseConfig {
 }
 
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct LimitsConfig {
     pub devices: u32,
     pub settings: u32,
@@ -59,14 +59,14 @@ pub struct LimitsConfig {
     pub stall_time: Duration,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RateLimitConfig {
     pub time_frame: u64,
     pub max_requests: usize,
     pub max_connections: usize,
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct LogConfig {
     pub file: Option<PathBuf>,
     pub erase_file_on_start: bool,
