@@ -1,4 +1,4 @@
-use crate::{error::Error, server::config::Config};
+use crate::{config::Config, error::Error};
 use std::{fs, time::SystemTime};
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{

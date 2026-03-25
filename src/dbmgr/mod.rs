@@ -1,9 +1,7 @@
 use crate::{
     cli::DatabaseCommand,
-    server::{
-        config::Config,
-        db::{DatabaseBackend, DatabaseClient, EraseOptions},
-    },
+    config::Config,
+    server::db::{DatabaseBackend, DatabaseClient, EraseOptions},
 };
 use color_print::cprintln;
 use std::{io::stdin, process::exit};

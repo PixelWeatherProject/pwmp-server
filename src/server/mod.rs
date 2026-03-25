@@ -1,5 +1,7 @@
-use crate::server::{db::DatabaseClient, handle::server_loop};
-use config::Config;
+use crate::{
+    config::Config,
+    server::{db::DatabaseClient, handle::server_loop},
+};
 use socket2::SockRef;
 use std::{io, os::fd::AsFd, process::exit, sync::Arc, time::Duration};
 use tokio::{
@@ -10,7 +12,6 @@ use tracing::{error, info};
 
 mod client;
 mod client_handle;
-pub mod config;
 pub mod db;
 pub mod handle;
 pub mod rate_limit;

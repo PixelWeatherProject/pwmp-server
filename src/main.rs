@@ -1,9 +1,10 @@
+use crate::config::Config;
 use clap::Parser;
 use cli::Command;
-use server::config::Config;
 use tracing::{debug, info};
 
 mod cli;
+mod config;
 mod dbmgr;
 mod error;
 mod logging;
@@ -15,7 +16,7 @@ mod tester;
 async fn main() -> Result<(), error::Error> {
     let args = cli::Cli::parse();
     let config_path = args.config.clone().unwrap_or_else(Config::default_path);
-    let (config, first_run) = server::config::setup(&config_path)?;
+    let (config, first_run) = config::setup(&config_path)?;
 
     if let Err(why) = logging::setup(args.debug, &config) {
         eprintln!("Failed to set up logging: {why}");

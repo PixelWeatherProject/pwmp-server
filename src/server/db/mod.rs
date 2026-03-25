@@ -1,6 +1,6 @@
 use crate::{
+    config::{Config, DatabaseConfig},
     error::Error,
-    server::config::{Config, DatabaseConfig},
 };
 use pwmp_client::pwmp_msg::{
     aliases::{AirPressure, BatteryVoltage, Humidity, Rssi, Temperature},

@@ -1,10 +1,9 @@
 use super::{
     client::{Authenticated, Client},
-    config::Config,
     db::DatabaseClient,
     rate_limit::RateLimiter,
 };
-use crate::{error::Error, server::db::DatabaseBackend};
+use crate::{config::Config, error::Error, server::db::DatabaseBackend};
 use pwmp_client::pwmp_msg::{request::Request, response::Response};
 use std::{io::Read, net::SocketAddr, sync::Arc, time::Duration};
 use tokio::{net::TcpStream, time::timeout};

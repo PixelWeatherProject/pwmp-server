@@ -1,5 +1,5 @@
-use super::{config::Config, db::DatabaseClient, rate_limit::RateLimiter};
-use crate::server::client_handle::handle_client;
+use super::{db::DatabaseClient, rate_limit::RateLimiter};
+use crate::{config::Config, server::client_handle::handle_client};
 use semaphore::Semaphore;
 use std::{net::SocketAddr, panic, sync::Arc, time::Duration};
 use tokio::{
