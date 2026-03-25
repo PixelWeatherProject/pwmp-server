@@ -14,6 +14,7 @@ use crate::error::Error;
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Config {
     pub server: ServerConfig,
+    pub webapi: WebApiConfig,
     pub database: DatabaseConfig,
     pub limits: LimitsConfig,
     #[serde(rename = "rate_limiter")]
@@ -25,6 +26,13 @@ pub struct Config {
 pub struct ServerConfig {
     pub host: Ipv4Addr,
     pub port: u16,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WebApiConfig {
+    ip: Ipv4Addr,
+    port: u16,
+    auth_key: Box<str>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -79,6 +87,16 @@ impl Default for ServerConfig {
         Self {
             host: Ipv4Addr::UNSPECIFIED,
             port: 55300,
+        }
+    }
+}
+
+impl Default for WebApiConfig {
+    fn default() -> Self {
+        Self {
+            ip: Ipv4Addr::UNSPECIFIED,
+            port: 8001,
+            auth_key: "chnageme".to_string().into_boxed_str(),
         }
     }
 }
