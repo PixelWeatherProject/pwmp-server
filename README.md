@@ -137,3 +137,6 @@ You can test the container using the following command:
 # Note that the config already exists on the host!
 docker run --rm -it -v ~/.pwmp-server:/config:ro pwmp-server
 ```
+
+## Proxies
+The server has been tested behind a reverse proxy using Nginx Proxy Manager stream, however, it caused some level of instability. Using reverse proxies is not recommended, as they may interfere with the custom socket optimizations.
