@@ -83,3 +83,14 @@ pub enum Error {
     #[error("Path to the SQLite database must be absolute")]
     IllegalSqlitePath,
 }
+
+impl actix_web::ResponseError for Error {
+    fn status_code(&self) -> actix_web::http::StatusCode {
+        actix_web::http::StatusCode::INTERNAL_SERVER_ERROR
+    }
+
+    fn error_response(&self) -> actix_web::HttpResponse<actix_web::body::BoxBody> {
+        actix_web::HttpResponse::new(actix_web::http::StatusCode::INTERNAL_SERVER_ERROR)
+            .set_body(actix_web::body::BoxBody::new(self.to_string()))
+    }
+}
