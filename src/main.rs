@@ -11,6 +11,7 @@ mod logging;
 mod server;
 mod svcmgr;
 mod tester;
+mod webapi;
 
 #[tokio::main]
 async fn main() -> Result<(), error::Error> {
@@ -33,6 +34,7 @@ async fn main() -> Result<(), error::Error> {
 
     match args.command {
         Some(Command::Service { command }) => svcmgr::main(command),
+        Some(Command::WebApi) => webapi::start(&config)?,
         Some(Command::Database { command }) => dbmgr::main(command, &config).await,
         Some(Command::Test { host, mac, port }) => tester::test(host, port, mac),
         None => server::main(config).await,
