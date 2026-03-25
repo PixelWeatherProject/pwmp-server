@@ -8,6 +8,8 @@ use pwmp_client::pwmp_msg::{
     settings::NodeSettings,
     version::Version,
 };
+use serde::Serialize;
+use sqlx::FromRow;
 
 mod postgres;
 mod sqlite;
@@ -16,6 +18,14 @@ pub type NodeId = i32;
 pub type MeasurementId = i32;
 pub type FirmwareBlob = Box<[u8]>;
 pub type UpdateStatId = i32;
+
+#[derive(Debug, FromRow, Serialize)]
+pub struct DeviceDescriptor {
+    id: i32,
+    mac_address: Box<str>,
+    location: Option<Box<str>>,
+    note: Option<Box<str>>,
+}
 
 pub enum DatabaseClient {
     Postgres(postgres::PostgresClient),
@@ -69,6 +79,8 @@ pub trait DatabaseBackend {
     async fn mark_os_update_stat(&self, node_id: NodeId, success: bool) -> Result<(), Error>;
 
     async fn erase(&self, options: EraseOptions) -> Result<(), Error>;
+
+    async fn devices(&self) -> Result<Box<[DeviceDescriptor]>, Error>;
 }
 
 impl DatabaseClient {
@@ -189,6 +201,13 @@ impl DatabaseBackend for DatabaseClient {
         match self {
             Self::Postgres(client) => client.erase(options).await,
             Self::Sqlite(client) => client.erase(options).await,
+        }
+    }
+
+    async fn devices(&self) -> Result<Box<[DeviceDescriptor]>, Error> {
+        match self {
+            Self::Postgres(client) => client.devices().await,
+            Self::Sqlite(client) => client.devices().await,
         }
     }
 }
