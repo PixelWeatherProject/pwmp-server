@@ -30,6 +30,9 @@ pub enum Command {
         command: DatabaseCommand,
     },
 
+    /// Start HTTP Web API server
+    WebApi,
+
     /// Test connection to a PWMP server
     Test {
         /// Host to connect to
