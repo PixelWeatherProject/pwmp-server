@@ -138,5 +138,30 @@ You can test the container using the following command:
 docker run --rm -it -v ~/.pwmp-server:/app/data:ro pwmp-server
 ```
 
+Alternatively, here is a minimal `docker-compose.yml` example:
+```yaml
+services:
+  pwmp-server:
+    image: ghcr.io/pixelweatherproject/pwmp-server:latest
+    command: "--debug"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    deploy:
+      resources:
+        limits:
+          cpus: 1.0
+          memory: 1024M
+    ports:
+      - "55300:55300/tcp"
+    volumes:
+      - ./config.yml:/app/data/config.yml:ro
+    restart: unless-stopped
+```
+
+> **Note**: The above example is minimal and does not include a database container. You will need to set up a separate container for the database and configure the server accordingly.
+
 ## Proxies
 The server has been tested behind a reverse proxy using Nginx Proxy Manager stream, however, it caused some level of instability. Using reverse proxies is not recommended, as they may interfere with the custom socket optimizations.
