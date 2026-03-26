@@ -68,7 +68,7 @@ impl Default for RateLimitConfig {
     fn default() -> Self {
         Self {
             time_frame: 1,
-            max_requests: 4,
+            max_requests: 20,
             max_connections: 4,
         }
     }
