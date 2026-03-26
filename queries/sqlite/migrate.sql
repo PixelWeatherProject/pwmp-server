@@ -63,7 +63,7 @@ CREATE TABLE
         version_minor INTEGER NOT NULL CHECK (version_minor >= 0),
         firmware BLOB NOT NULL CHECK (length (firmware) > 0),
         added_date TEXT UNIQUE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        restrict_nodes TEXT DEFAULT NULL
+        restrict_nodes JSON DEFAULT NULL
     ) STRICT;
 
 CREATE TABLE

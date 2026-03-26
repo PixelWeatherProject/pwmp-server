@@ -288,6 +288,33 @@ impl super::DatabaseBackend for SqliteClient {
         err
     )]
     async fn get_firmwares(&self) -> Result<Vec<FirmwareEntry>, Error> {
-        todo!()
+        let raw_results = sqlx::query(include_str!("../../../queries/sqlite/get_firmwares.sql"))
+            .fetch_all(&self.0)
+            .await?;
+
+        // SQLite does not have arrays so we need to deal with JSON
+
+        let mut results = Vec::with_capacity(raw_results.len());
+
+        for result in raw_results {
+            let restrict_json: Option<String> = result.get(5);
+
+            let restrict = restrict_json.map(|json| {
+                serde_json::from_str::<Vec<i32>>(&json).expect("Invalid firmware restrict format")
+            });
+
+            let fwe = FirmwareEntry {
+                id: result.get(0),
+                version: Version::parse(result.get::<&str, _>(1)).expect("Invalid version string"),
+                size: result.get(2),
+                blob: result.get(3),
+                added: result.get(4),
+                restrict,
+            };
+
+            results.push(fwe);
+        }
+
+        Ok(results)
     }
 }
