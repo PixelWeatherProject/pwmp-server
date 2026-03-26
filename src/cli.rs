@@ -100,7 +100,7 @@ pub enum OtaCommand {
     List,
 
     /// Download a firmware binary from the database
-    Download { id: u32 },
+    Download { id: i32, output: PathBuf },
 
     /// Upload a firmware binary to the database
     Push {

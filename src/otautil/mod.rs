@@ -7,7 +7,8 @@ use crate::{
     },
 };
 use std::process::exit;
-use tracing::error;
+use tokio::fs;
+use tracing::{error, info};
 
 pub async fn run(command: OtaCommand, config: &Config) -> Result<(), Error> {
     let client = DatabaseClient::new(config).await?;
@@ -34,7 +35,20 @@ pub async fn run(command: OtaCommand, config: &Config) -> Result<(), Error> {
 
             println!("Total size: {total_size} bytes");
         }
-        OtaCommand::Download { id } => {}
+        OtaCommand::Download { id, output } => {
+            let firmwares = client.get_firmwares().await?;
+            let selection = firmwares.iter().find(|candidate| candidate.id == id);
+
+            match selection {
+                Some(entry) => {
+                    fs::write(output, &entry.blob).await?;
+                    info!("Successfully pulled");
+                }
+                None => {
+                    error!("No firmware with ID {id}");
+                }
+            }
+        }
         OtaCommand::Push {
             blob,
             version,
