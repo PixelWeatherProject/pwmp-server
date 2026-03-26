@@ -57,10 +57,13 @@ pub async fn handle_client(
                     response,
                     Response::InvalidRequest /* add more as needed */
                 ) {
-                    warn!(
+                    error!(
                         "{}: Error while processing request: {response:?}",
                         client.id()
                     );
+
+                    client.shutdown(Some(response)).await?;
+                    return Ok(());
                 }
 
                 client.send_response(response).await?;
