@@ -1,5 +1,5 @@
-# PWMP Server
-This crate contains the PixelWeather Messaging Protocol Server and CLI.
+# PixelWeather Messaging Protocol Server
+This is the server application for the PixelWeather Messaging Protocol, which is a custom protocol designed for communication between PixelWeather nodes. The server is responsible for handling incoming connections, processing requests, and managing the state of connected devices.
 
 #### CI Stats
 [![Run static analysis on commit](https://github.com/PixelWeatherProject/pwmp-server/actions/workflows/verify_commits.yml/badge.svg)](https://github.com/PixelWeatherProject/pwmp-server/actions/workflows/verify_commits.yml) | [![Release tagged versions](https://github.com/PixelWeatherProject/pwmp-server/actions/workflows/release.yml/badge.svg)](https://github.com/PixelWeatherProject/pwmp-server/actions/workflows/release.yml) | [![Build and push the Docker image](https://github.com/PixelWeatherProject/pwmp-server/actions/workflows/docker_build.yml/badge.svg)](https://github.com/PixelWeatherProject/pwmp-server/actions/workflows/docker_build.yml)
@@ -58,15 +58,12 @@ logging:
   erase_file_on_start: false
 ```
 
-## Database server
-Only PostgreSQL and SQLite are supported. It's recommended to use the latest version.
-
-Compatibility has been verified with the following versions:
-- PostgreSQL
-  - 16.x
-  - 17.4
-- SQLite
-  - 3.52.0
+## Database support
+|                      | **Supported** | **Tested version** |
+|----------------------|:-------------:|:------------------:|
+| PostgreSQL           |       ✅      |     16.x, 17.x     |
+| SQLite               |       ✅      |       3.52.0       |
+| MySQL                |       ❌      |                    |
 
 ## Using as a service
 The CLI has a `service` subcommand, which allows managing a background service.
