@@ -7,7 +7,11 @@ mod openrc;
 mod systemd;
 mod traits;
 
-#[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
+#[allow(
+    clippy::too_many_lines,
+    clippy::cognitive_complexity,
+    clippy::needless_pass_by_value
+)]
 pub fn main(cmd: ServiceCommand) {
     let manager = detect_manager();
 

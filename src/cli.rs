@@ -1,3 +1,4 @@
+use crate::server::db::NodeId;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
@@ -30,6 +31,11 @@ pub enum Command {
         command: DatabaseCommand,
     },
 
+    Ota {
+        #[command(subcommand)]
+        command: OtaCommand,
+    },
+
     /// Test connection to a PWMP server
     Test {
         /// Host to connect to
@@ -41,7 +47,7 @@ pub enum Command {
     },
 }
 
-#[derive(Debug, Subcommand, Clone, Copy)]
+#[derive(Debug, Subcommand, Clone)]
 pub enum ServiceCommand {
     /// Start the service
     Start,
@@ -68,7 +74,7 @@ pub enum ServiceCommand {
     Reinstall,
 }
 
-#[derive(Debug, Subcommand, Clone, Copy)]
+#[derive(Debug, Subcommand, Clone)]
 pub enum DatabaseCommand {
     /// Test connection to the database
     Test,
@@ -85,5 +91,27 @@ pub enum DatabaseCommand {
         /// Keep configured devices and their settings
         #[arg(long)]
         keep_devices: bool,
+    },
+}
+
+#[derive(Debug, Subcommand, Clone)]
+pub enum OtaCommand {
+    /// List firmwares in the database
+    List,
+
+    /// Download a firmware binary from the database
+    Download { id: u32 },
+
+    /// Upload a firmware binary to the database
+    Push {
+        /// Path to the binary blob
+        blob: PathBuf,
+
+        /// Semantic version string
+        version: String,
+
+        /// Restrict the firmware to only be available for the specified node
+        #[arg(short, long, action = clap::ArgAction::Append)]
+        restrict: Vec<NodeId>,
     },
 }

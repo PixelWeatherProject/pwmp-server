@@ -1,4 +1,6 @@
-use super::{EraseOptions, FirmwareBlob, MeasurementId, NodeId, SleepTime, UpdateStatId};
+use super::{
+    EraseOptions, FirmwareBlob, FirmwareEntry, MeasurementId, NodeId, SleepTime, UpdateStatId,
+};
 use crate::error::Error;
 use pwmp_client::pwmp_msg::{
     aliases::{AirPressure, BatteryVoltage, Humidity, Rssi, Temperature},
@@ -296,5 +298,31 @@ impl super::DatabaseBackend for PostgresClient {
 
         sqlx::query(sql).execute(&self.0).await?;
         Ok(())
+    }
+
+    #[tracing::instrument(
+        name = "PostgresClient::get_firmwares()",
+        level = "debug",
+        skip(self),
+        err
+    )]
+    async fn get_firmwares(&self) -> Result<Vec<FirmwareEntry>, Error> {
+        let raw_results = sqlx::query(include_str!("../../../queries/postgres/get_firmwares.sql"))
+            .fetch_all(&self.0)
+            .await?;
+
+        let results = raw_results
+            .iter()
+            .map(|row| FirmwareEntry {
+                id: row.get(0),
+                version: Version::parse(row.get::<&str, _>(1)).expect("Invalid version string"),
+                size: row.get(2),
+                blob: row.get(3),
+                added: row.get(4),
+                restrict: row.get(5),
+            })
+            .collect();
+
+        Ok(results)
     }
 }

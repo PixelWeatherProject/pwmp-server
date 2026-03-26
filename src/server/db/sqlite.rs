@@ -1,4 +1,6 @@
-use super::{EraseOptions, FirmwareBlob, MeasurementId, NodeId, SleepTime, UpdateStatId};
+use super::{
+    EraseOptions, FirmwareBlob, FirmwareEntry, MeasurementId, NodeId, SleepTime, UpdateStatId,
+};
 use crate::error::Error;
 use pwmp_client::pwmp_msg::{
     aliases::{AirPressure, BatteryVoltage, Humidity, Rssi, Temperature},
@@ -277,5 +279,15 @@ impl super::DatabaseBackend for SqliteClient {
 
         sqlx::raw_sql(sql).execute(&self.0).await?;
         Ok(())
+    }
+
+    #[tracing::instrument(
+        name = "SqliteClient::get_firmwares()",
+        level = "debug",
+        skip(self),
+        err
+    )]
+    async fn get_firmwares(&self) -> Result<Vec<FirmwareEntry>, Error> {
+        todo!()
     }
 }

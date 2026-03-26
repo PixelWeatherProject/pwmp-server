@@ -29,6 +29,16 @@ pub enum EraseOptions {
     ContentOnly { keep_devices: bool },
 }
 
+#[derive(Debug, Clone)]
+pub struct FirmwareEntry {
+    pub id: i32,
+    pub version: Version,
+    pub size: i32,
+    pub blob: Vec<u8>,
+    pub added: String,
+    pub restrict: Option<Vec<NodeId>>,
+}
+
 pub trait DatabaseBackend {
     async fn authorize_device(&self, mac: &Mac) -> Result<Option<NodeId>, Error>;
 
@@ -70,6 +80,8 @@ pub trait DatabaseBackend {
     async fn mark_os_update_stat(&self, node_id: NodeId, success: bool) -> Result<(), Error>;
 
     async fn erase(&self, options: EraseOptions) -> Result<(), Error>;
+
+    async fn get_firmwares(&self) -> Result<Vec<FirmwareEntry>, Error>;
 }
 
 impl DatabaseClient {
@@ -190,6 +202,13 @@ impl DatabaseBackend for DatabaseClient {
         match self {
             Self::Postgres(client) => client.erase(options).await,
             Self::Sqlite(client) => client.erase(options).await,
+        }
+    }
+
+    async fn get_firmwares(&self) -> Result<Vec<FirmwareEntry>, Error> {
+        match self {
+            Self::Postgres(client) => client.get_firmwares().await,
+            Self::Sqlite(client) => client.get_firmwares().await,
         }
     }
 }
