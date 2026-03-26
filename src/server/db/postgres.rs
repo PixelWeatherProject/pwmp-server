@@ -1,4 +1,7 @@
-use super::{DeviceDescriptor, EraseOptions, FirmwareBlob, MeasurementId, NodeId, UpdateStatId};
+use super::{
+    CompleteMeasurement, DeviceDescriptor, EraseOptions, FirmwareBlob, MeasurementId, NodeId,
+    UpdateStatId,
+};
 use crate::error::Error;
 use pwmp_client::pwmp_msg::{
     aliases::{AirPressure, BatteryVoltage, Humidity, Rssi, Temperature},
@@ -304,6 +307,23 @@ impl super::DatabaseBackend for PostgresClient {
             sqlx::query_as(include_str!("../../../queries/postgres/get_devices.sql"))
                 .fetch_all(&self.0)
                 .await?;
+
+        Ok(result.into_boxed_slice())
+    }
+
+    #[tracing::instrument(
+        name = "PostgresClient::node_measurements()",
+        level = "debug",
+        skip(self),
+        err
+    )]
+    async fn node_measurements(&self, node: NodeId) -> Result<Box<[CompleteMeasurement]>, Error> {
+        let result: Vec<CompleteMeasurement> = sqlx::query_as(include_str!(
+            "../../../queries/postgres/get_node_measurements.sql"
+        ))
+        .bind(node)
+        .fetch_all(&self.0)
+        .await?;
 
         Ok(result.into_boxed_slice())
     }

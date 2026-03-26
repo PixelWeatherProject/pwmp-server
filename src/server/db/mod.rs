@@ -21,10 +21,23 @@ pub type UpdateStatId = i32;
 
 #[derive(Debug, FromRow, Serialize)]
 pub struct DeviceDescriptor {
-    id: i32,
+    id: NodeId,
     mac_address: Box<str>,
     location: Option<Box<str>>,
     note: Option<Box<str>>,
+}
+
+#[derive(Debug, FromRow, Serialize)]
+pub struct CompleteMeasurement {
+    id: MeasurementId,
+    node: NodeId,
+    when: Box<str>,
+    temperature: Temperature,
+    humidity: i8,
+    air_pressure: i16,
+    battery: BatteryVoltage,
+    wifi_ssid: Box<str>,
+    wifi_rssi: i8,
 }
 
 pub enum DatabaseClient {
@@ -81,6 +94,8 @@ pub trait DatabaseBackend {
     async fn erase(&self, options: EraseOptions) -> Result<(), Error>;
 
     async fn devices(&self) -> Result<Box<[DeviceDescriptor]>, Error>;
+
+    async fn node_measurements(&self, node: NodeId) -> Result<Box<[CompleteMeasurement]>, Error>;
 }
 
 impl DatabaseClient {
@@ -208,6 +223,13 @@ impl DatabaseBackend for DatabaseClient {
         match self {
             Self::Postgres(client) => client.devices().await,
             Self::Sqlite(client) => client.devices().await,
+        }
+    }
+
+    async fn node_measurements(&self, node: NodeId) -> Result<Box<[CompleteMeasurement]>, Error> {
+        match self {
+            Self::Postgres(client) => client.node_measurements(node).await,
+            Self::Sqlite(client) => client.node_measurements(node).await,
         }
     }
 }

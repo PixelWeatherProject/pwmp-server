@@ -3,6 +3,7 @@ use actix_web::{
     App, HttpServer,
     dev::{ServiceRequest, ServiceResponse},
     error::ErrorForbidden,
+    http::header::AUTHORIZATION,
     middleware::Next,
     web,
 };
@@ -35,6 +36,7 @@ pub async fn start(config: &Config) -> std::io::Result<()> {
                     .wrap(actix_web::middleware::from_fn(auth_middleware))
                     .service(routes::index)
                     .service(routes::get_devices)
+                    .service(routes::get_node_measurements)
             })
             .bind((config.webapi.ip, config.webapi.port))?
             .run()
@@ -51,15 +53,24 @@ async fn auth_middleware(
 ) -> actix_web::Result<ServiceResponse<actix_web::body::BoxBody>> {
     let config = req.app_data::<web::Data<Config>>().unwrap();
 
-    let Some((_, token)) = req
+    let Some((_, auth_header)) = req
         .headers()
         .iter()
-        .find(|(name, _)| name.as_str() == "Authorization")
+        .find(|(name, _)| *name == AUTHORIZATION)
     else {
         return Err(ErrorForbidden("Missing auth token"));
     };
 
-    if token.to_str().unwrap() != config.webapi.auth_key.as_ref() {
+    let Some(token) = auth_header
+        .to_str()
+        .unwrap()
+        .split_once(' ')
+        .map(|res| res.1)
+    else {
+        return Err(ErrorForbidden("Invalid auth token format"));
+    };
+
+    if token != config.webapi.auth_key.as_ref() {
         return Err(ErrorForbidden("Forbidden"));
     }
 
