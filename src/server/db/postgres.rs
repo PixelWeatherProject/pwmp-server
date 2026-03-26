@@ -162,7 +162,7 @@ impl super::DatabaseBackend for PostgresClient {
     )]
     async fn post_stats(
         &self,
-        measurement: super::MeasurementId,
+        measurement: MeasurementId,
         battery: BatteryVoltage,
         wifi_ssid: &str,
         wifi_rssi: Rssi,
