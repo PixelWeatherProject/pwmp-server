@@ -3,5 +3,6 @@ target/
 .env
 .gitignore
 .git/
+.github/
 *.md
 docker-compose.yml
