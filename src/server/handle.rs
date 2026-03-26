@@ -1,7 +1,7 @@
 use super::{config::Config, db::DatabaseClient, rate_limit::RateLimiter};
 use crate::server::client_handle::handle_client;
 use semaphore::Semaphore;
-use std::{net::SocketAddr, panic, sync::Arc, time::Duration};
+use std::{net::SocketAddr, panic, sync::Arc};
 use tokio::{
     net::{TcpListener, TcpStream},
     runtime::Handle,
@@ -20,10 +20,7 @@ pub async fn server_loop(
 ) {
     let shared_db = Arc::new(db);
     let connections = Semaphore::new(config.limits.devices as _, ());
-    let mut rate_limiter = RateLimiter::new(
-        Duration::from_secs(config.rate_limits.time_frame),
-        config.rate_limits.max_connections,
-    );
+    let mut rate_limiter = RateLimiter::new(config.rate_limits.max_connections);
 
     loop {
         select! {

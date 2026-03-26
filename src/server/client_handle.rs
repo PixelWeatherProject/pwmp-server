@@ -6,7 +6,7 @@ use super::{
 };
 use crate::{error::Error, server::db::DatabaseBackend};
 use pwmp_client::pwmp_msg::{request::Request, response::Response};
-use std::{io::Read, net::SocketAddr, sync::Arc, time::Duration};
+use std::{io::Read, net::SocketAddr, sync::Arc};
 use tokio::{net::TcpStream, time::timeout};
 use tracing::{debug, error, warn};
 
@@ -18,10 +18,7 @@ pub async fn handle_client(
     config: Arc<Config>,
 ) -> Result<(), Error> {
     let client = Client::new(client, peer_addr);
-    let mut rate_limiter = RateLimiter::new(
-        Duration::from_secs(config.rate_limits.time_frame),
-        config.rate_limits.max_requests,
-    );
+    let mut rate_limiter = RateLimiter::new(config.rate_limits.max_requests);
     let mut client = client.authorize(db).await?;
 
     loop {

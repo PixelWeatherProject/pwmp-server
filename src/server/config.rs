@@ -53,7 +53,6 @@ pub struct LimitsConfig {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RateLimitConfig {
-    pub time_frame: u64,
     pub max_requests: usize,
     pub max_connections: usize,
 }
@@ -67,7 +66,6 @@ pub struct LogConfig {
 impl Default for RateLimitConfig {
     fn default() -> Self {
         Self {
-            time_frame: 1,
             max_requests: 20,
             max_connections: 4,
         }

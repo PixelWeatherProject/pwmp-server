@@ -42,10 +42,9 @@ limits:
 
 # Configuration for the built-in rate limiter.
 rate_limiter:
-  time_frame: 1 # second(s)
-  # Maximum amount of requests a client can make within the specified time frame above.
+  # Maximum amount of requests a client can make per second.
   max_requests: 20
-  # Maximum amount of connections that may be accepted within the specified time frame above.
+  # Maximum amount of connections that may be accepted within 1 second.
   max_connections: 4
 
 # Logging configuration
