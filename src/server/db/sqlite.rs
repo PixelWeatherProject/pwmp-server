@@ -317,4 +317,31 @@ impl super::DatabaseBackend for SqliteClient {
 
         Ok(results)
     }
+
+    #[tracing::instrument(
+        name = "SqliteClient::upload_firmware()",
+        level = "debug",
+        skip(self),
+        err
+    )]
+    async fn upload_firmware(
+        &self,
+        blob: Vec<u8>,
+        version: Version,
+        restrict_nodes: Option<Vec<NodeId>>,
+    ) -> Result<(), Error> {
+        let restrict_json = restrict_nodes.map(|array| {
+            serde_json::to_string(&array).expect("Failed to serialize restrict_nodes to JSON")
+        });
+
+        sqlx::query::<Sqlite>(include_str!("../../../queries/sqlite/push_firmware.sql"))
+            .bind(i16::from(version.major()))
+            .bind(i16::from(version.middle()))
+            .bind(i16::from(version.minor()))
+            .bind(blob)
+            .bind(restrict_json)
+            .execute(&self.0)
+            .await?;
+        Ok(())
+    }
 }

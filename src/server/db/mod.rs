@@ -82,6 +82,13 @@ pub trait DatabaseBackend {
     async fn erase(&self, options: EraseOptions) -> Result<(), Error>;
 
     async fn get_firmwares(&self) -> Result<Vec<FirmwareEntry>, Error>;
+
+    async fn upload_firmware(
+        &self,
+        blob: Vec<u8>,
+        version: Version,
+        restrict_nodes: Option<Vec<NodeId>>,
+    ) -> Result<(), Error>;
 }
 
 impl DatabaseClient {
@@ -209,6 +216,18 @@ impl DatabaseBackend for DatabaseClient {
         match self {
             Self::Postgres(client) => client.get_firmwares().await,
             Self::Sqlite(client) => client.get_firmwares().await,
+        }
+    }
+
+    async fn upload_firmware(
+        &self,
+        blob: Vec<u8>,
+        version: Version,
+        restrict_nodes: Option<Vec<NodeId>>,
+    ) -> Result<(), Error> {
+        match self {
+            Self::Postgres(client) => client.upload_firmware(blob, version, restrict_nodes).await,
+            Self::Sqlite(client) => client.upload_firmware(blob, version, restrict_nodes).await,
         }
     }
 }

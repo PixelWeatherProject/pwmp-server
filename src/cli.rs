@@ -112,6 +112,6 @@ pub enum OtaCommand {
 
         /// Restrict the firmware to only be available for the specified node
         #[arg(short, long, action = clap::ArgAction::Append)]
-        restrict: Vec<NodeId>,
+        restrict: Option<Vec<NodeId>>,
     },
 }

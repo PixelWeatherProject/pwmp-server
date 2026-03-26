@@ -6,6 +6,7 @@ use crate::{
         db::{DatabaseBackend, DatabaseClient},
     },
 };
+use pwmp_client::pwmp_msg::version::Version;
 use std::process::exit;
 use tokio::fs;
 use tracing::{error, info};
@@ -35,7 +36,7 @@ pub async fn run(command: OtaCommand, config: &Config) -> Result<(), Error> {
 
             println!("Total size: {total_size} bytes");
         }
-        OtaCommand::Download { id, output } => {
+        OtaCommand::Pull { id, output } => {
             let firmwares = client.get_firmwares().await?;
             let selection = firmwares.iter().find(|candidate| candidate.id == id);
 
@@ -53,7 +54,16 @@ pub async fn run(command: OtaCommand, config: &Config) -> Result<(), Error> {
             blob,
             version,
             restrict,
-        } => todo!(),
+        } => {
+            let blob = fs::read(blob).await?;
+            let Some(version) = Version::parse(&version) else {
+                error!("Invalid semantic version string '{version}'");
+                exit(1);
+            };
+
+            client.upload_firmware(blob, version, restrict).await?;
+            info!("Successfully pushed");
+        }
     }
 
     Ok(())

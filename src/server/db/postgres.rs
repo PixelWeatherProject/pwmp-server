@@ -325,4 +325,27 @@ impl super::DatabaseBackend for PostgresClient {
 
         Ok(results)
     }
+
+    #[tracing::instrument(
+        name = "PostgresClient::upload_firmware()",
+        level = "debug",
+        skip(self),
+        err
+    )]
+    async fn upload_firmware(
+        &self,
+        blob: Vec<u8>,
+        version: Version,
+        restrict_nodes: Option<Vec<NodeId>>,
+    ) -> Result<(), Error> {
+        sqlx::query(include_str!("../../../queries/postgres/push_firmware.sql"))
+            .bind(i16::from(version.major()))
+            .bind(i16::from(version.middle()))
+            .bind(i16::from(version.minor()))
+            .bind(blob)
+            .bind(restrict_nodes)
+            .execute(&self.0)
+            .await?;
+        Ok(())
+    }
 }
