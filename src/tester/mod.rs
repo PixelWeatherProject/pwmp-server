@@ -68,10 +68,17 @@ pub fn test(host: String, port: Option<u16>, raw_mac: String) {
     debug!("Testing OTA API");
     match client.check_os_update(Version::new(0, 0, 0)) {
         Ok(UpdateStatus::Available(..)) => {
-            debug!("Testing update chunk request");
-            if let Err(why) = client.next_update_chunk(None) {
-                error!("Failed: {why}");
-                exit(1);
+            loop {
+                debug!("Testing update chunk request");
+
+                match client.next_update_chunk(None) {
+                    Err(why) => {
+                        error!("Failed: {why}");
+                        exit(1);
+                    }
+                    Ok(None) => break,
+                    Ok(..) => (),
+                }
             }
 
             debug!("Testing firmware report");
