@@ -197,9 +197,9 @@ impl super::DatabaseBackend for SqliteClient {
         match result {
             Some(row) => {
                 let new_version = Version::new(
-                    row.get::<i8, _>(0).try_into()?,
-                    row.get::<i8, _>(1).try_into()?,
-                    row.get::<i8, _>(3).try_into()?,
+                    row.get::<i16, _>(0).try_into()?,
+                    row.get::<i16, _>(1).try_into()?,
+                    row.get::<i16, _>(2).try_into()?,
                 );
                 let blob = row.get::<Vec<u8>, _>(3).into_boxed_slice();
                 Ok(Some((new_version, blob)))
