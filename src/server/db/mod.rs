@@ -16,6 +16,7 @@ pub type NodeId = i32;
 pub type MeasurementId = i32;
 pub type FirmwareBlob = Box<[u8]>;
 pub type UpdateStatId = i32;
+pub type SleepTime = i16;
 
 pub enum DatabaseClient {
     Postgres(postgres::PostgresClient),

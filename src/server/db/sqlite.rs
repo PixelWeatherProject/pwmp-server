@@ -1,4 +1,4 @@
-use super::{EraseOptions, FirmwareBlob, MeasurementId, NodeId, UpdateStatId};
+use super::{EraseOptions, FirmwareBlob, MeasurementId, NodeId, SleepTime, UpdateStatId};
 use crate::error::Error;
 use pwmp_client::pwmp_msg::{
     aliases::{AirPressure, BatteryVoltage, Humidity, Rssi, Temperature},
@@ -105,7 +105,7 @@ impl super::DatabaseBackend for SqliteClient {
             Some(row) => Some(NodeSettings {
                 battery_ignore: row.get(0),
                 ota: row.get(1),
-                sleep_time: row.get::<i32, _>(2).try_into()?,
+                sleep_time: row.get::<SleepTime, _>(2).try_into()?,
                 sbop: row.get(3),
                 mute_notifications: row.get(4),
             }),
