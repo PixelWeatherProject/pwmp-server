@@ -82,4 +82,8 @@ pub enum Error {
     /// The SQLite database file path is not absolute.
     #[error("Path to the SQLite database must be absolute")]
     IllegalSqlitePath,
+
+    /// An invalid request was received
+    #[error("Got invalid request")]
+    InvalidRequest,
 }

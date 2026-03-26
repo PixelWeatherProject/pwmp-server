@@ -38,15 +38,15 @@ impl SqliteClient {
     pub async fn get_last_os_update_stat_for_node(
         &self,
         node_id: NodeId,
-    ) -> Result<UpdateStatId, Error> {
+    ) -> Result<Option<UpdateStatId>, Error> {
         let row = sqlx::query(include_str!(
             "../../../queries/sqlite/get_last_update_event.sql"
         ))
         .bind(node_id)
-        .fetch_one(&self.0)
+        .fetch_optional(&self.0)
         .await?;
 
-        Ok(row.get(0))
+        row.map_or_else(|| Ok(None), |row| Ok(Some(row.get(0))))
     }
 }
 
@@ -247,7 +247,10 @@ impl super::DatabaseBackend for SqliteClient {
         err
     )]
     async fn mark_os_update_stat(&self, node_id: NodeId, success: bool) -> Result<(), Error> {
-        let update_stat_id = self.get_last_os_update_stat_for_node(node_id).await?;
+        let Some(update_stat_id) = self.get_last_os_update_stat_for_node(node_id).await? else {
+            tracing::error!("Node {node_id} did not pull the entire firmware blob");
+            return Err(Error::InvalidRequest);
+        };
 
         sqlx::query(include_str!(
             "../../../queries/sqlite/update_os_update_event.sql"

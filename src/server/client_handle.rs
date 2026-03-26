@@ -75,6 +75,7 @@ pub async fn handle_client(
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
 #[tracing::instrument(name = "handle_request()", skip_all, level = "debug", err, ret)]
 async fn handle_request(
     req: Request,
@@ -165,6 +166,7 @@ async fn handle_request(
             let read = reader.read(&mut buf)?;
             let chunk = &buf[..read];
 
+            // if the entire blob has been sent
             if chunk.is_empty() {
                 db.send_os_update_stat(
                     client.id(),
@@ -182,8 +184,11 @@ async fn handle_request(
             Ok(Response::UpdatePart(buf.into_boxed_slice()))
         }
         Request::ReportFirmwareUpdate(success) => {
-            db.mark_os_update_stat(client.id(), success).await?;
-            Ok(Response::Ok)
+            match db.mark_os_update_stat(client.id(), success).await {
+                Err(Error::InvalidRequest) => Ok(Response::InvalidRequest),
+                Err(why) => Err(why),
+                Ok(()) => Ok(Response::Ok),
+            }
         }
         Request::Bye => unreachable!(),
     }
