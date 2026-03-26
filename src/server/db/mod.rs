@@ -40,6 +40,15 @@ pub struct CompleteMeasurement {
     wifi_rssi: i8,
 }
 
+#[derive(Debug, FromRow, Serialize)]
+pub struct Notification {
+    id: i32,
+    node: NodeId,
+    when: Box<str>,
+    content: Box<str>,
+    read: bool,
+}
+
 pub enum DatabaseClient {
     Postgres(postgres::PostgresClient),
     Sqlite(sqlite::SqliteClient),
@@ -96,6 +105,8 @@ pub trait DatabaseBackend {
     async fn devices(&self) -> Result<Box<[DeviceDescriptor]>, Error>;
 
     async fn node_measurements(&self, node: NodeId) -> Result<Box<[CompleteMeasurement]>, Error>;
+
+    async fn notifications(&self, node: NodeId) -> Result<Box<[Notification]>, Error>;
 }
 
 impl DatabaseClient {
@@ -230,6 +241,13 @@ impl DatabaseBackend for DatabaseClient {
         match self {
             Self::Postgres(client) => client.node_measurements(node).await,
             Self::Sqlite(client) => client.node_measurements(node).await,
+        }
+    }
+
+    async fn notifications(&self, node: NodeId) -> Result<Box<[Notification]>, Error> {
+        match self {
+            Self::Postgres(client) => client.notifications(node).await,
+            Self::Sqlite(client) => client.notifications(node).await,
         }
     }
 }
