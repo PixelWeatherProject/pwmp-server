@@ -1,8 +1,5 @@
 FROM rust:1.94.0-alpine AS build
 
-# Enable offline SQLx checks
-ENV SQLX_OFFLINE=true
-
 WORKDIR /app
 
 COPY . /app
