@@ -1,8 +1,11 @@
-.github/
-target/
-.env
-.gitignore
 .git/
 .github/
+.gitignore
+
+target/
+.env
 *.md
+Cross.toml
+
 docker-compose.yml
+Dockerfile
