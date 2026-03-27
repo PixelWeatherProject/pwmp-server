@@ -337,7 +337,7 @@ impl super::DatabaseBackend for SqliteClient {
             serde_json::to_string(&array).expect("Failed to serialize restrict_nodes to JSON")
         });
 
-        sqlx::query::<Sqlite>(include_str!("../../../queries/sqlite/push_firmware.sql"))
+        sqlx::query(include_str!("../../../queries/sqlite/push_firmware.sql"))
             .bind(i16::from(version.major()))
             .bind(i16::from(version.middle()))
             .bind(i16::from(version.minor()))
