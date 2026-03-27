@@ -1,5 +1,6 @@
 #![allow(clippy::module_name_repetitions)]
 
+use crate::error::Error;
 use serde::{Deserialize, Serialize};
 use serde_with::{DurationSeconds, serde_as};
 use std::{
@@ -7,8 +8,6 @@ use std::{
     path::PathBuf,
     time::Duration,
 };
-
-use crate::error::Error;
 
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize, Default)]
