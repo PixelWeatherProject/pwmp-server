@@ -1,41 +1,67 @@
-name: pwmp-server
-
 services:
-    pwmp-server:
-      container_name: pwmp-server
-      stdin_open: true
-      tty: true
+  pwmp-server:
+    image: ghcr.io/pixelweatherproject/pwmp-server:latest
+    container_name: pwmp-server
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    pids_limit: 8
+    cpus: 1
+    mem_limit: 1024m
+    stdin_open: false
+    tty: false
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=1m
+    ports:
+      - "55300:55300/tcp"
+    environment:
+      # Optionally force debug logging
+      PWMP_DEBUG: true
+    volumes:
+      - ./config.yml:/app/data/config.yml:ro
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
 
-      build:
-        context: .
-        dockerfile: Dockerfile
-      
-      restart: unless-stopped
-
-      volumes:
-          - ~/.pwmp-server:/config:ro
-      
-      ports:
-          - 55300:55300
-    
-    postgres:
-      container_name: pwmp-server
-      
-      image: postgres:17.4-alpine3.21
-      restart: unless-stopped
-      
-      environment:
-        POSTGRES_PASSWORD: 'root'
-        POSTGRES_USER: 'root'
-        POSTGRES_DB: 'root_db'
-        PGTZ: 'Europe/Bratislava'
-        TZ: 'Europe/Bratislava'
-      
-      ports:
-        - 5432:5432
-      
-      expose:
-        - '5432'
-      
-      volumes:
-        - ./postgres-data:/var/lib/postgresql/data
+  postgres:
+    container_name: pwmp-postgres
+    image: postgres:17.4-alpine3.21
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    pids_limit: 96
+    cpus: 1
+    mem_limit: 1024m
+    stdin_open: false
+    tty: false
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m
+    environment:
+      POSTGRES_PASSWORD: 'root'
+      POSTGRES_USER: 'root'
+      POSTGRES_DB: 'root_db'
+      PGTZ: 'Europe/Bratislava'
+      TZ: 'Europe/Bratislava'
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d root_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
