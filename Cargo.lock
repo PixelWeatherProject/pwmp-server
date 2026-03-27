@@ -1172,8 +1172,8 @@ dependencies = [
 
 [[package]]
 name = "pwmp-client"
-version = "2.2.2"
-source = "git+https://github.com/PixelWeatherProject/pwmp-client.git?tag=v2.2.2#55a89ccff8c9e6242016951e7444a48ee8f4ce0c"
+version = "2.2.3"
+source = "git+https://github.com/PixelWeatherProject/pwmp-client.git?tag=v2.2.3#4d8bbe12195fc72dbfe5df0597dddb6fd9b85003"
 dependencies = [
  "libc",
  "pwmp-msg",
@@ -1182,8 +1182,8 @@ dependencies = [
 
 [[package]]
 name = "pwmp-msg"
-version = "2.1.10"
-source = "git+https://github.com/PixelWeatherProject/pwmp-msg?tag=v2.1.10#e32ef28cf6de9d8e00a7a494830c6cd280553762"
+version = "2.1.11"
+source = "git+https://github.com/PixelWeatherProject/pwmp-msg?tag=v2.1.11#37463a47791472077ee525e5350abd560ebe4ad6"
 dependencies = [
  "derive_more",
  "postcard",
