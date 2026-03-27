@@ -53,10 +53,7 @@ pub async fn handle_client(
 
         match handle_request(request, &mut client, db).await {
             Ok(response) => {
-                if matches!(
-                    response,
-                    Response::InvalidRequest /* add more as needed */
-                ) {
+                if response.is_error() {
                     error!(
                         "{}: Error while processing request: {response:?}",
                         client.id()
