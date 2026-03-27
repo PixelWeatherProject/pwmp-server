@@ -105,6 +105,10 @@ You can also send a simple "ping" request using `SIGUSR1`:
 kill -SIGUSR1 $(pidof pwmp-server)
 ```
 
+## Logging
+You can force debug logging in release builds by using the `--debug` flag, or by setting the `PWMP_DEBUG` environment variable to `true` (case insensitive). Any other value will be ignored.
+In debug builds, debug logging is enabled by default.
+
 ## Compiling caveats and portability
 In general, *x86* and *aarch64* are well-supported with *Linux*. macOS *should* theoretically work. Windows is **not** supported and there are no plans for it.
 Cross-compilation to macOS requires additional setup, due to licensing restrictions.

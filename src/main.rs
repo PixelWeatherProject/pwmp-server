@@ -18,9 +18,8 @@ async fn main() -> Result<(), error::Error> {
     let args = cli::Cli::parse();
     let config_path = args.config.clone().unwrap_or_else(Config::default_path);
     let (config, first_run) = server::config::setup(&config_path)?;
-    let force_debug = args.debug
-        || env::var("PWMP_DEBUG")
-            .is_ok_and(|value| ["OK", "1", "YES", "true"].contains(&value.to_lowercase().as_str()));
+    let force_debug =
+        args.debug || env::var("PWMP_DEBUG").is_ok_and(|value| value.to_lowercase() == "true");
 
     if let Err(why) = logging::setup(force_debug, &config) {
         eprintln!("Failed to set up logging: {why}");
