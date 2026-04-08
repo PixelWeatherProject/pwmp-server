@@ -1200,7 +1200,6 @@ dependencies = [
  "color-print",
  "confy",
  "homedir",
- "iana-time-zone",
  "pwmp-client",
  "regex",
  "semaphore",
