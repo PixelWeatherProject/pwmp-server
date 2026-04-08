@@ -115,15 +115,16 @@ Cross-compilation to macOS requires additional setup, due to licensing restricti
 
 #### Platform support table
 **Note**: This incomplete and may change in the future!
-|          **Target**           | **Supported** | **`cargo-cross` support** |
-| :---------------------------: | :-----------: | :-----------------------: |
-|  `x86_64-unknown-linux-gnu`   |       ✅       |             ✅           |
-|  `x86_64-unknown-linux-musl`  |       ✅       |             ✅           |
-|   `x86_64-unknown-freebsd`    |       ✅       |             ✅           |
-|  `aarch64-unknown-linux-gnu`  |       ✅       |             ✅           |
-| `aarch64-unknown-linux-musl`  |       ✅       |             ✅           |
-|    `aarch64-apple-darwin`     |       ✅       |             ❌           |
-| `armv7-unknown-linux-gnueabi` |       ✅       |             ✅           |
+|          **Target**            | **Supported** | **`cargo-cross` support** |
+| :----------------------------: | :-----------: | :-----------------------: |
+|  `x86_64-unknown-linux-gnu`    |       ✅       |             ✅           |
+|  `x86_64-unknown-linux-musl`   |       ✅       |             ✅           |
+|   `x86_64-unknown-freebsd`     |       ✅       |             ✅           |
+|  `aarch64-unknown-linux-gnu`   |       ✅       |             ✅           |
+| `aarch64-unknown-linux-musl`   |       ✅       |             ✅           |
+|    `aarch64-apple-darwin`      |       ✅       |             ❌           |
+| `armv7-unknown-linux-gnueabi`  |       ✅       |             ✅           |
+| `armv7-unknown-linux-musleabi` |       ✅       |             ✅           |
 
 ## Docker support
 You can build a Docker image using the provided [`Dockerfile`](./Dockerfile).
