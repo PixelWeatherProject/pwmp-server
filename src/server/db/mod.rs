@@ -231,3 +231,13 @@ impl DatabaseBackend for DatabaseClient {
         }
     }
 }
+
+impl EraseOptions {
+    pub const fn new(content_only: bool, keep_devices: bool) -> Self {
+        if content_only {
+            Self::ContentOnly { keep_devices }
+        } else {
+            Self::Everything
+        }
+    }
+}
