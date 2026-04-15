@@ -140,10 +140,12 @@ To run the necessary database migrations, you can use the following command:
 docker compose exec pwmp-server /app/pwmp-server --config /app/data/config.yml database init
 ```
 
+Running the server with a plain `docker run -it --rm pwmp-server:latest` will **not** work, as the server will try to create the configuration file and without a volume, the changes will be lost on container restart. You can use a bind mount to persist the configuration file.
+
 You can use OpenSSL to generate random password string for the database:
 ```sh
 openssl rand -hex 16
-``` 
+```
 
 ## Proxies
 The server has been tested behind a reverse proxy using Nginx Proxy Manager stream, however, it caused some level of instability. Using reverse proxies is not recommended, as they may interfere with the custom socket optimizations.
