@@ -1,5 +1,3 @@
-LABEL org.opencontainers.image.source="https://github.com/pixelweatherproject/pwmp-server"
-
 ###
 ### Build stage
 ###
@@ -15,6 +13,8 @@ RUN apk update && apk add git && cargo build --release --locked
 ##
 
 FROM alpine:3.23.3 AS runner
+
+LABEL org.opencontainers.image.source="https://github.com/pixelweatherproject/pwmp-server"
 
 RUN apk update && apk add tini
 WORKDIR /app
