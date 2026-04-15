@@ -1,3 +1,5 @@
+LABEL org.opencontainers.image.source="https://github.com/pixelweatherproject/pwmp-server"
+
 ###
 ### Build stage
 ###
