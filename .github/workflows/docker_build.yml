@@ -36,3 +36,11 @@ jobs:
           tags: |
             ghcr.io/pixelweatherproject/pwmp-server:latest
             br0kenpixel/pwmp-server:latest
+      
+      - name: Update Docker Hub Description
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: br0kenpixel/pwmp-server
+          readme-filepath: ./README.md
