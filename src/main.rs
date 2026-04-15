@@ -2,7 +2,7 @@ use clap::Parser;
 use cli::Command;
 use server::config::Config;
 use std::env;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 mod cli;
 mod dbmgr;
@@ -30,6 +30,7 @@ async fn main() -> Result<(), error::Error> {
     debug!("Arguments: {args:?}");
 
     if first_run {
+        warn!("No configuration found, creating one");
         info!("Configuration initialized at {}", config_path.display());
         return Ok(());
     }
