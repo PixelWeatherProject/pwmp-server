@@ -12,7 +12,7 @@ use sqlx::{
     Pool, Row, Sqlite,
     sqlite::{SqliteConnectOptions, SqlitePoolOptions},
 };
-use std::path::PathBuf;
+use std::{path::PathBuf, time::Duration};
 
 pub struct SqliteClient(Pool<Sqlite>);
 
@@ -25,10 +25,13 @@ impl SqliteClient {
 
         let opts = SqliteConnectOptions::new()
             .filename(path)
-            .create_if_missing(true);
+            .create_if_missing(true)
+            .busy_timeout(Duration::from_secs(3))
+            .optimize_on_close(true, None);
 
         let pool = SqlitePoolOptions::new()
             .max_connections(3)
+            .min_connections(1)
             .connect_with(opts)
             .await?;
 
