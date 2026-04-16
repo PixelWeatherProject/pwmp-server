@@ -10,7 +10,7 @@ use pwmp_client::pwmp_msg::{
 };
 use sqlx::{
     Pool, Row, Sqlite,
-    sqlite::{SqliteConnectOptions, SqlitePoolOptions},
+    sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous},
 };
 use std::{path::PathBuf, time::Duration};
 
@@ -27,7 +27,9 @@ impl SqliteClient {
             .filename(path)
             .create_if_missing(true)
             .busy_timeout(Duration::from_secs(3))
-            .optimize_on_close(true, None);
+            .optimize_on_close(true, None)
+            .journal_mode(SqliteJournalMode::Wal)
+            .synchronous(SqliteSynchronous::Normal);
 
         let pool = SqlitePoolOptions::new()
             .max_connections(3)
