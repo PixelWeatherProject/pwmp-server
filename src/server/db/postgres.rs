@@ -32,7 +32,8 @@ impl PostgresClient {
             .port(port)
             .username(user)
             .password(password)
-            .database(name);
+            .database(name)
+            .options([("synchronous_commit", "off")]);
 
         if ssl {
             opts = opts.ssl_mode(PgSslMode::Require);
