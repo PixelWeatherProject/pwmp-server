@@ -33,7 +33,8 @@ impl PostgresClient {
             .username(user)
             .password(password)
             .database(name)
-            .options([("synchronous_commit", "off")]);
+            .options([("synchronous_commit", "off")])
+            .application_name("pwmp-server");
 
         if ssl {
             opts = opts.ssl_mode(PgSslMode::Require);
