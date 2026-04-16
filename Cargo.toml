@@ -15,6 +15,7 @@ lto = "fat"
 codegen-units = 1
 strip = true
 panic = "abort"
+opt-level = 3
 
 [dependencies]
 pwmp-client = { git = "https://github.com/PixelWeatherProject/pwmp-client.git", tag = "v2.2.3" }
