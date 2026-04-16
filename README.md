@@ -64,6 +64,11 @@ logging:
 | SQLite               |       ✅      |       3.52.0       |
 | MySQL                |       ❌      |                    |
 
+### Chosing a database
+PostgreSQL is the recommended database for production use with a large number of devices, while SQLite is suitable for small setups or testing purposes.
+SQLite will perform a lot faster (min/max/avg response times <1ms) but offers less type safety and may result in slightly higher CPU and RAM usage due to not supporting certain features that have to be emulated with multiple queries or additional logic.
+PostgreSQL causes higher latency (min/max/avg response times >10ms) but has higher priority when it comes to features.
+
 ## Using as a service
 The CLI has a `service` subcommand, which allows managing a background service.
 
