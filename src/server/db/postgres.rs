@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use super::{
     EraseOptions, FirmwareBlob, FirmwareEntry, MeasurementId, NodeId, SleepTime, UpdateStatId,
 };
@@ -38,6 +40,10 @@ impl PostgresClient {
 
         let pool = PgPoolOptions::new()
             .max_connections(3)
+            .min_connections(1)
+            .acquire_timeout(Duration::from_secs(3))
+            .idle_timeout(Duration::from_secs(3600))
+            .max_lifetime(None)
             .connect_with(opts)
             .await?;
 
