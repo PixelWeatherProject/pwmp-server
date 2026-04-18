@@ -5,6 +5,7 @@ See other repositories for more components of the PixelWeather ecosystem:
 - [Core types of the messaging protocol (`pwmp-msg`)](https://github.com/PixelWeatherProject/pwmp-msg)
 - [Client implementation (`pwmp-client`)](https://github.com/PixelWeatherProject/pwmp-client)
 - [Node firmware (`pwos`)](https://github.com/PixelWeatherProject/pwos)
+- [Home Assistant entity configuration generator (`pw-hassgen`)](https://github.com/PixelWeatherProject/pw-hassgen)
 
 #### CI Stats
 [![Run static analysis on commit](https://github.com/PixelWeatherProject/pwmp-server/actions/workflows/verify_commits.yml/badge.svg)](https://github.com/PixelWeatherProject/pwmp-server/actions/workflows/verify_commits.yml) | [![Release tagged versions](https://github.com/PixelWeatherProject/pwmp-server/actions/workflows/release.yml/badge.svg)](https://github.com/PixelWeatherProject/pwmp-server/actions/workflows/release.yml) | [![Build and push the Docker image](https://github.com/PixelWeatherProject/pwmp-server/actions/workflows/docker_build.yml/badge.svg)](https://github.com/PixelWeatherProject/pwmp-server/actions/workflows/docker_build.yml)
