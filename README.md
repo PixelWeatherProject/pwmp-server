@@ -154,3 +154,21 @@ openssl rand -hex 16
 
 ## Proxies
 The server has been tested behind a reverse proxy using Nginx Proxy Manager stream, however, it caused some level of instability. Using reverse proxies is not recommended, as they may interfere with the custom socket optimizations.
+
+## Over-the-Air updates
+The PixelWeather network is designed to support over-the-air updates for devices. The architecture is fairly simple, with the database acting as a central repository for firmware files, and the server facilitating the distribution of these files to connected devices, when requested.
+
+Notable details:
+- Nodes with outdated firmware that is several versions behind, can only get the latest update.
+  - Example: Assume a node with PWOS version 1.0.0, and the latest version is 1.2.0. The node will only receive the 1.2.0 update, and not anything in between.
+- The server does not perform any validation on the firmware files, so it's the responsibility of the user to ensure that the correct files are uploaded to the database.
+- The server does not perform any validation on the version numbers, so it's the responsibility of the user to ensure that the version numbers in `version_major`, `version_middle`, and `version_minor` are correct and match the version numbers in the firmware files.
+- The `restrict_nodes` field can be used to restrict the update to specific nodes. It's type is a simple JSON array of node IDs.
+  - A `NULL` value means that the update is available to all nodes.
+  - An empty array means that the update is not available to any nodes. Useful for testing purposes.
+  - An array with values (`[1, 2, 3]`) means that the update is only available to the nodes with the specified IDs.
+
+Nodes must request firmware blobs in chunks, while the chunk size can be adjusted by the client even during the transfer. See [`Request::NextUpdateChunk`](https://github.com/PixelWeatherProject/pwmp-msg/blob/9d76debe97e316fc6dc76995db276a2ddf0e759d/src/request.rs#L59).
+
+Every update attempt is logged in the `firmware_stats` table, which can be used to track the success rate of updates, and to identify any potential issues with specific firmware versions or devices.
+The `success` field indicates whether the update was successful/unsuccessful, or hasn't been reported yet as either (`NULL`).
