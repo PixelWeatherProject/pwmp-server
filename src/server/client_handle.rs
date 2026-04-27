@@ -10,6 +10,9 @@ use std::{io::Read, net::SocketAddr, sync::Arc};
 use tokio::{net::TcpStream, time::timeout};
 use tracing::{debug, error, warn};
 
+/// Maximum OTA chunk size a client can request.
+const MAX_OTA_CHUNK_SIZE: u32 = 4 * 1024; // 4 MiB
+
 #[allow(clippy::needless_pass_by_value, clippy::cognitive_complexity)]
 pub async fn handle_client(
     client: TcpStream,
@@ -153,6 +156,10 @@ async fn handle_request(
             }
         }
         Request::NextUpdateChunk(chunk_size) => {
+            if chunk_size > MAX_OTA_CHUNK_SIZE {
+                return Ok(Response::InvalidRequest);
+            }
+
             let Some(reader) = client.update_chunk() else {
                 error!(
                     "{}: Requested update when there is none available",
