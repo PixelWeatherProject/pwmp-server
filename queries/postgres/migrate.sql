@@ -1,3 +1,7 @@
+-- 
+-- TABLES
+-- 
+
 CREATE TABLE devices (
     id SERIAL PRIMARY KEY,
     mac_address VARCHAR(17) UNIQUE NOT NULL CHECK (mac_address ~ E'^([0-9A-F]{2}:){5}[0-9A-F]{2}$'),
@@ -9,18 +13,16 @@ CREATE TABLE
     measurements (
         id SERIAL PRIMARY KEY,
         node INT4 NOT NULL REFERENCES devices (id),
-        "when" TIMESTAMP
-        WITH
-            TIME ZONE NOT NULL DEFAULT NOW (),
-            temperature REAL NOT NULL CHECK (
-                temperature > -100.00
-                AND temperature < 100.00
-            ),
-            humidity SMALLINT NOT NULL CHECK (
-                humidity >= 0
-                AND humidity <= 100
-            ),
-            air_pressure SMALLINT DEFAULT NULL
+        "when" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW (),
+        temperature REAL NOT NULL CHECK (
+            temperature > -100.00
+            AND temperature < 100.00
+        ),
+        humidity SMALLINT NOT NULL CHECK (
+            humidity >= 0
+            AND humidity <= 100
+        ),
+        air_pressure SMALLINT DEFAULT NULL
     );
 
 CREATE TABLE
@@ -79,3 +81,69 @@ CREATE TABLE
         "when" TIMESTAMP NOT NULL DEFAULT NOW (),
         success BOOLEAN DEFAULT NULL
     );
+
+-- 
+-- HELPER FUNCTIONS
+-- 
+
+-- Calculates the dew point based on the temperature in Celsius and relative humidity percentage.
+CREATE OR REPLACE FUNCTION pwmp_calc_dew_point(temp_c REAL, humidity SMALLINT)
+RETURNS REAL AS $$
+DECLARE
+    alpha REAL;
+    dew_point REAL;
+BEGIN
+    -- Prevent log of zero if humidity sensor glitches and reads 0
+    IF humidity <= 0 THEN
+        RETURN NULL; 
+    END IF;
+
+    -- Calculate the intermediate alpha value
+    alpha := ((17.27 * temp_c) / (237.3 + temp_c)) + LN(humidity / 100.0);
+    
+    -- Calculate final dew point
+    dew_point := (237.3 * alpha) / (17.27 - alpha);
+    
+    RETURN dew_point;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- Categorizes the dew point into human comfort levels based on standard thresholds.
+CREATE OR REPLACE FUNCTION pwmp_categorize_dew_point(dew_point REAL)
+RETURNS VARCHAR AS $$
+BEGIN
+    IF dew_point IS NULL THEN
+        RETURN NULL;
+    ELSIF dew_point < 10 THEN
+        RETURN 'Dry';
+    ELSIF dew_point <= 15 THEN
+        RETURN 'Comfortable';
+    ELSIF dew_point <= 18 THEN
+        RETURN 'Humid';
+    ELSIF dew_point <= 21 THEN
+        RETURN 'Muggy';
+    ELSIF dew_point <= 24 THEN
+        RETURN 'Oppressive';
+    ELSE
+        RETURN 'Dangerous';
+    END IF;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- Calculates the sea level pressure from the absolute air pressure, temperature in Celsius, and altitude in meters using the barometric formula.
+CREATE OR REPLACE FUNCTION pwmp_calc_sea_level_pressure(abs_air_pressure SMALLINT, temp_c REAL, altitude_m REAL)
+RETURNS REAL AS $$
+DECLARE
+    sea_level_pressure REAL;
+BEGIN
+    -- Protect against absolute zero math errors
+    IF temp_c < -273 THEN
+        RETURN NULL; 
+    END IF;
+
+    -- The Barometric Formula
+    sea_level_pressure := abs_air_pressure * POWER(1.0 - (0.0065 * altitude_m) / (temp_c + (0.0065 * altitude_m) + 273.15), -5.257);
+
+    RETURN sea_level_pressure;
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
