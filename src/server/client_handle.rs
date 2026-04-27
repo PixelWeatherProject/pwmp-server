@@ -162,6 +162,7 @@ async fn handle_request(
                 return Ok(Response::InvalidRequest);
             };
 
+            let chunk_size = chunk_size.try_into()?;
             let mut buf = vec![0; chunk_size];
             let read = reader.read(&mut buf)?;
             let chunk = &buf[..read];
