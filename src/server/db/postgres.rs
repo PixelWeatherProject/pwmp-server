@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use super::{
     EraseOptions, FirmwareBlob, FirmwareEntry, MeasurementId, NodeId, SleepTime, UpdateStatId,
 };
@@ -14,6 +12,7 @@ use sqlx::{
     Pool, Postgres, Row,
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
 };
+use std::time::Duration;
 
 pub struct PostgresClient(Pool<Postgres>);
 
@@ -44,7 +43,7 @@ impl PostgresClient {
             .max_connections(3)
             .min_connections(1)
             .acquire_timeout(Duration::from_secs(3))
-            .idle_timeout(Duration::from_secs(3600))
+            .idle_timeout(Duration::from_hours(1))
             .max_lifetime(None)
             .connect_with(opts)
             .await?;
