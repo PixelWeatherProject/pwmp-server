@@ -18,7 +18,7 @@ panic = "abort"
 opt-level = 3
 
 [dependencies]
-pwmp-client = { git = "https://github.com/PixelWeatherProject/pwmp-client.git", tag = "v2.2.3" }
+pwmp-client = { git = "https://github.com/PixelWeatherProject/pwmp-client.git", tag = "v2.2.4" }
 time = { version = "0.3.47", default-features = false, features = ["macros"] }
 sqlx = { version = "0.8.6", default-features = false, features = [
     "postgres",
@@ -36,9 +36,9 @@ confy = { version = "2.0.0", default-features = false, features = [
     "yaml_conf",
 ] }
 homedir = { version = "0.3.6", default-features = false }
-whoami = { version = "2.1.1", default-features = false }
+whoami = { version = "2.1.2", default-features = false }
 serde = { version = "1.0.228", features = ["derive"] }
-clap = { version = "4.6.0", features = ["derive"] }
+clap = { version = "4.6.1", features = ["derive"] }
 socket2 = { version = "0.6.3", features = ["all"] }
 tracing-subscriber = "0.3.23"
 circular-queue = "0.2.7"
