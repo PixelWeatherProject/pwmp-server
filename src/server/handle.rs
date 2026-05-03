@@ -1,5 +1,7 @@
-use super::{config::Config, db::DatabaseClient, rate_limit::RateLimiter};
-use crate::server::client_handle::handle_client;
+use super::{
+    NotifyReceiver, NotifySender, config::Config, db::DatabaseClient, rate_limit::RateLimiter,
+};
+use crate::server::{client_handle::handle_client, notification_client::NotificationClient};
 use semaphore::Semaphore;
 use std::{net::SocketAddr, panic, sync::Arc};
 use tokio::{
@@ -14,6 +16,7 @@ use tracing::{debug, error, info, warn};
 pub async fn server_loop(
     server: &TcpListener,
     db: DatabaseClient,
+    notify: NotifySender,
     config: Arc<Config>,
     mut stop_sig: Signal,
     mut ping_sig: Signal,
@@ -26,7 +29,7 @@ pub async fn server_loop(
         select! {
             res = server.accept() => {
                 match res {
-                    Ok(res) => handle_new_client(res.0, res.1, Arc::clone(&shared_db), &connections, &mut rate_limiter, Arc::clone(&config)),
+                    Ok(res) => handle_new_client(res.0, res.1, notify.clone(), Arc::clone(&shared_db), &connections, &mut rate_limiter, Arc::clone(&config)),
                     Err(why) => {
                         error!("Failed to accept connection: {why}");
                         return;
@@ -51,6 +54,7 @@ pub async fn server_loop(
 fn handle_new_client(
     client: TcpStream,
     peer_addr: SocketAddr,
+    notify: NotifySender,
     shared_db: Arc<DatabaseClient>,
     connections: &Semaphore<()>,
     rate_limiter: &mut RateLimiter,
@@ -80,7 +84,7 @@ fn handle_new_client(
         let _semguard = semguard;
 
         debug!("Starting client handle");
-        match handle_client(client, peer_addr, &shared_db, config).await {
+        match handle_client(client, peer_addr, &shared_db, &notify, config).await {
             Ok(()) => {
                 debug!("{peer_addr}: Handled successfully");
             }
@@ -105,4 +109,22 @@ fn display_rt_metrics() {
             error!("Runtime metrics are not available: {e}");
         }
     }
+}
+
+pub async fn notify_loop(mut receiver: NotifyReceiver, mut notify: NotificationClient) {
+    debug!("Starting notifier loop");
+
+    loop {
+        let Some(message) = receiver.recv().await else {
+            debug!("Notifier loop received None, exiting");
+            break;
+        };
+
+        match notify.send_notification(&message).await {
+            Ok(()) => debug!("Notification sent successfully"),
+            Err(why) => error!("Failed to send notification: {why}"),
+        }
+    }
+
+    debug!("Notifier loop exited");
 }

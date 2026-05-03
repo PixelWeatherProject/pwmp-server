@@ -1,4 +1,5 @@
 use super::{
+    NotifySender,
     client::{Authenticated, Client},
     config::Config,
     db::DatabaseClient,
@@ -6,7 +7,7 @@ use super::{
 };
 use crate::{error::Error, server::db::DatabaseBackend};
 use pwmp_client::pwmp_msg::{request::Request, response::Response};
-use std::{io::Read, net::SocketAddr, sync::Arc};
+use std::{io::Read, net::SocketAddr, sync::Arc, time::Duration};
 use tokio::{net::TcpStream, time::timeout};
 use tracing::{debug, error, warn};
 
@@ -18,6 +19,7 @@ pub async fn handle_client(
     client: TcpStream,
     peer_addr: SocketAddr,
     db: &DatabaseClient,
+    notify: &NotifySender,
     config: Arc<Config>,
 ) -> Result<(), Error> {
     let client = Client::new(client, peer_addr);
@@ -54,7 +56,7 @@ pub async fn handle_client(
             break;
         }
 
-        match handle_request(request, &mut client, db).await {
+        match handle_request(request, &mut client, db, notify).await {
             Ok(response) => {
                 if response.is_error() {
                     error!(
@@ -84,6 +86,7 @@ async fn handle_request(
     req: Request,
     client: &mut Client<Authenticated>,
     db: &DatabaseClient,
+    notify: &NotifySender,
 ) -> Result<Response, Error> {
     debug!("Handling {req:#?}");
 
@@ -132,6 +135,7 @@ async fn handle_request(
         }
         Request::SendNotification(message) => {
             db.create_notification(client.id(), &message).await?;
+            notify_send(notify, format!("[Node #{}] {message}", client.id()).into()).await?;
             Ok(Response::Ok)
         }
         Request::GetSettings => {
@@ -200,4 +204,11 @@ async fn handle_request(
         }
         Request::Bye => unreachable!(),
     }
+}
+
+async fn notify_send(notify: &NotifySender, message: Box<str>) -> Result<(), Error> {
+    notify
+        .send_timeout(message, Duration::from_secs(3))
+        .await
+        .map_err(|_| Error::NotifyMpscSendTimeout)
 }

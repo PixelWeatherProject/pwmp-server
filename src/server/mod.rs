@@ -1,18 +1,27 @@
-use crate::server::{db::DatabaseClient, handle::server_loop};
+use crate::server::{
+    db::DatabaseClient,
+    handle::{notify_loop, server_loop},
+    notification_client::NotificationClient,
+};
 use config::Config;
 use socket2::SockRef;
 use std::{io, os::fd::AsFd, process::exit, sync::Arc, time::Duration};
 use tokio::{
     net::TcpListener,
     signal::unix::{Signal, SignalKind, signal},
+    sync::mpsc,
 };
 use tracing::{error, info};
+
+pub type NotifySender = mpsc::Sender<Box<str>>;
+pub type NotifyReceiver = mpsc::Receiver<Box<str>>;
 
 mod client;
 mod client_handle;
 pub mod config;
 pub mod db;
 pub mod handle;
+pub mod notification_client;
 pub mod rate_limit;
 
 #[allow(clippy::cognitive_complexity)]
@@ -27,6 +36,19 @@ pub async fn main(config: Config) {
             exit(1);
         }
     };
+
+    info!("Setting up notification backend");
+    let notify = match NotificationClient::new(config.notification.as_ref()) {
+        Ok(client) => client,
+        Err(why) => {
+            error!("Failed to set up notification backend: {why}");
+            exit(1);
+        }
+    };
+    let (notify_sender, notify_receiver) = mpsc::channel(8);
+    tokio::task::spawn(async move {
+        notify_loop(notify_receiver, notify).await;
+    });
 
     let server = match TcpListener::bind(config.server_bind_addr()).await {
         Ok(socket) => socket,
@@ -44,7 +66,7 @@ pub async fn main(config: Config) {
     let (stop_sig, ping_sig) = setup_signals();
 
     info!("Server started on {}", config.server_bind_addr());
-    server_loop(&server, db, config, stop_sig, ping_sig).await;
+    server_loop(&server, db, notify_sender, config, stop_sig, ping_sig).await;
 }
 
 fn setup_signals() -> (Signal, Signal) {
