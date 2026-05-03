@@ -66,7 +66,7 @@ pub struct LogConfig {
 #[derive(Debug, Serialize, Deserialize)]
 pub enum NotificationServiceConfig {
     Pushsafer {
-        api_key: Box<str>,
+        private_key: Box<str>,
         device: Box<str>,
     },
     HassNotify {

@@ -65,7 +65,7 @@ logging:
 # Notification service configuration.
 # This section can be omitted or set to null to disable.
 # Note that service errors are handled lazily.
-notification !Pushsafer:
+notification: !Pushsafer:
   # Your private API key.
   private_key: "abc123"
 
@@ -73,7 +73,7 @@ notification !Pushsafer:
   device: "my_device"
 
 # ... or Home Assistant:
-notification !HassNotify:
+notification: !HassNotify
   # The URL of your Home Assistant instance, including the protocol and port if necessary.
   url: "http://123.456.789.012:8123"
 

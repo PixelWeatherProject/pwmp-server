@@ -18,8 +18,11 @@ impl NotificationClient {
         match config {
             None => Ok(Self::None),
             Some(service) => match service {
-                NotificationServiceConfig::Pushsafer { api_key, device } => {
-                    let client = PushsaferClient::new(device, api_key)?;
+                NotificationServiceConfig::Pushsafer {
+                    private_key,
+                    device,
+                } => {
+                    let client = PushsaferClient::new(device, private_key)?;
                     Ok(Self::Pushsafer(client))
                 }
                 NotificationServiceConfig::HassNotify { url, token, target } => {
