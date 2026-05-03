@@ -32,7 +32,6 @@ impl PostgresClient {
             .username(user)
             .password(password)
             .database(name)
-            .options([("synchronous_commit", "off")])
             .application_name("pwmp-server");
 
         if ssl {
