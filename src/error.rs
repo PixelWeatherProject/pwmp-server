@@ -86,4 +86,17 @@ pub enum Error {
     /// An invalid request was received
     #[error("Got invalid request")]
     InvalidRequest,
+
+    /// Failed to parse a URL.
+    #[error("Failed to parse a URL: {0}")]
+    UrlParse(#[from] url::ParseError),
+
+    /// HTTP request failed.
+    #[error("Failed to perform HTTP request: {0}")]
+    Reqwest(#[from] reqwest::Error),
+
+    /// Timeout while waiting for [`notify_loop()`](crate::server::handle::notify_loop)'s MPSC buffer
+    /// to be available.
+    #[error("Timeout while sending notification to notify loop")]
+    NotifyMpscSendTimeout,
 }
