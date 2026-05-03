@@ -70,8 +70,9 @@ pub enum NotificationServiceConfig {
         device: Box<str>,
     },
     HassNotify {
+        url: Box<str>,
         token: Box<str>,
-        targets: Box<[Box<str>]>,
+        target: Box<str>,
     },
 }
 

@@ -80,10 +80,10 @@ notification !HassNotify:
   # Your long-lived access token.
   token: "abc123"
 
-  # Target device entity IDs.
-  targets:
-    - "notify.mobile_app_abc123"
-    - "notify.mobile_app_def456"
+  # The target `notify.` entity.
+  # Do not include the `notify.` prefix, only the entity ID.
+  # Use the grouping feature of Home Assistant to send notifications to multiple devices at once.
+  target: "mobile_app_abc123"
 ```
 
 ## Database support
