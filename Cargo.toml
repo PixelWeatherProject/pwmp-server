@@ -38,6 +38,7 @@ confy = { version = "2.0.0", default-features = false, features = [
 homedir = { version = "0.3.6", default-features = false }
 whoami = { version = "2.1.2", default-features = false }
 serde = { version = "1.0.228", features = ["derive"] }
+reqwest = { version = "0.13.3", features = ["json"] }
 clap = { version = "4.6.1", features = ["derive"] }
 socket2 = { version = "0.6.3", features = ["all"] }
 tracing-subscriber = "0.3.23"
@@ -49,3 +50,4 @@ semaphore = "0.4.0"
 tracing = "0.1.44"
 chrono = "0.4.44"
 regex = "1.12.3"
+url = "2.5.8"
