@@ -18,6 +18,7 @@ pub struct Config {
     #[serde(rename = "rate_limiter")]
     pub rate_limits: RateLimitConfig,
     pub logging: LogConfig,
+    pub notification: Option<NotificationServiceConfig>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -60,6 +61,18 @@ pub struct RateLimitConfig {
 pub struct LogConfig {
     pub file: Option<PathBuf>,
     pub erase_file_on_start: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum NotificationServiceConfig {
+    Pushsafer {
+        api_key: Box<str>,
+        device: Box<str>,
+    },
+    HassNotify {
+        token: Box<str>,
+        targets: Box<[Box<str>]>,
+    },
 }
 
 impl Default for RateLimitConfig {

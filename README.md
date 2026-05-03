@@ -61,6 +61,29 @@ logging:
 
   # Whether to erase the log file on start
   erase_file_on_start: false
+
+# Notification service configuration.
+# This section can be omitted or set to null to disable.
+# Note that service errors are handled lazily.
+notification !Pushsafer:
+  # Your private API key.
+  private_key: "abc123"
+
+  # You may use device groups here, if you need to send notifications to multiple devices at once.
+  device: "my_device"
+
+# ... or Home Assistant:
+notification !HassNotify:
+  # The URL of your Home Assistant instance, including the protocol and port if necessary.
+  url: "http://123.456.789.012:8123"
+
+  # Your long-lived access token.
+  token: "abc123"
+
+  # Target device entity IDs.
+  targets:
+    - "notify.mobile_app_abc123"
+    - "notify.mobile_app_def456"
 ```
 
 ## Database support
