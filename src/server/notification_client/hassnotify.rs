@@ -14,8 +14,8 @@ impl HassNotifyClient {
         let client = reqwest::Client::new();
 
         let mut url = Url::parse(url)?;
-        let resource = format!("/api/services/notify/{device}");
-        url.set_query(Some(&resource));
+        let resource = format!("api/services/notify/{device}");
+        url.set_path(&resource);
 
         Ok(Self {
             client,
