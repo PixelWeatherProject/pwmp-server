@@ -24,6 +24,13 @@ impl PushsaferClient {
         Ok(Self { client, url })
     }
 
+    #[tracing::instrument(
+        name = "PushsaferClient::send_notification()",
+        level = "debug",
+        skip(self),
+        err,
+        ret
+    )]
     pub async fn send_notification(&mut self, content: &str) -> Result<(), Error> {
         let final_url = self
             .url

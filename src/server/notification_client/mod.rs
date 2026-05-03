@@ -4,6 +4,7 @@ mod pushsafer;
 use crate::{error::Error, server::config::NotificationServiceConfig};
 use hassnotify::HassNotifyClient;
 use pushsafer::PushsaferClient;
+use tracing::debug;
 
 #[derive(Debug)]
 pub enum NotificationClient {
@@ -29,11 +30,20 @@ impl NotificationClient {
         }
     }
 
+    #[tracing::instrument(
+        name = "NotificationClient::send_notification()",
+        level = "debug",
+        skip(self),
+        err,
+        ret
+    )]
     pub async fn send_notification(&mut self, content: &str) -> Result<(), Error> {
         match self {
             Self::HassNotify(client) => client.send_notification(content).await?,
             Self::Pushsafer(client) => client.send_notification(content).await?,
-            Self::None => (),
+            Self::None => {
+                debug!("No notification backend set up");
+            }
         }
 
         Ok(())

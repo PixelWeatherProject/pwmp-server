@@ -24,6 +24,13 @@ impl HassNotifyClient {
         })
     }
 
+    #[tracing::instrument(
+        name = "HassNotifyClient::send_notification()",
+        level = "debug",
+        skip(self),
+        err,
+        ret
+    )]
     pub async fn send_notification(&self, content: &str) -> Result<(), Error> {
         self.client
             .post(self.url.clone())
