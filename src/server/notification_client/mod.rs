@@ -40,7 +40,7 @@ impl NotificationClient {
         err,
         ret
     )]
-    pub async fn send_notification(&mut self, content: &str) -> Result<(), Error> {
+    pub async fn send_notification(&self, content: &str) -> Result<(), Error> {
         match self {
             Self::HassNotify(client) => client.send_notification(content).await?,
             Self::Pushsafer(client) => client.send_notification(content).await?,

@@ -31,20 +31,11 @@ impl PushsaferClient {
         err,
         ret
     )]
-    pub async fn send_notification(&mut self, content: &str) -> Result<(), Error> {
-        let final_url = self
-            .url
-            .query_pairs_mut()
-            .append_pair("m", content)
-            .finish()
-            .to_string();
+    pub async fn send_notification(&self, content: &str) -> Result<(), Error> {
+        let mut url = self.url.clone();
+        url.query_pairs_mut().append_pair("m", content);
 
-        self.client
-            .post(final_url)
-            .send()
-            .await?
-            .error_for_status()?;
-
+        self.client.post(url).send().await?.error_for_status()?;
         Ok(())
     }
 }

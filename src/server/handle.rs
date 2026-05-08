@@ -111,7 +111,7 @@ fn display_rt_metrics() {
     }
 }
 
-pub async fn notify_loop(mut receiver: NotifyReceiver, mut notify: NotificationClient) {
+pub async fn notify_loop(mut receiver: NotifyReceiver, notify: NotificationClient) {
     debug!("Starting notifier loop");
 
     loop {
