@@ -18,7 +18,7 @@ pub struct Config {
     #[serde(rename = "rate_limiter")]
     pub rate_limits: RateLimitConfig,
     pub logging: LogConfig,
-    pub notification: Option<NotificationServiceConfig>,
+    pub notification: NotificationConfig,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -61,6 +61,22 @@ pub struct RateLimitConfig {
 pub struct LogConfig {
     pub file: Option<PathBuf>,
     pub erase_file_on_start: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct NotificationConfig {
+    pub push_backend: Option<NotificationServiceConfig>,
+    pub events: NotificationEventsConfig,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+#[allow(clippy::struct_excessive_bools)] // this is not a state machine
+pub struct NotificationEventsConfig {
+    pub on_update_discovered: bool,
+    pub on_update_success: bool,
+    pub on_update_failed: bool,
+    pub on_measurements_posted: bool,
+    pub on_error_reported: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

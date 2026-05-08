@@ -38,7 +38,7 @@ pub async fn main(config: Config) {
     };
 
     info!("Setting up notification backend");
-    let notify = match NotificationClient::new(config.notification.as_ref()) {
+    let notify = match NotificationClient::new(config.notification.push_backend.as_ref()) {
         Ok(client) => client,
         Err(why) => {
             error!("Failed to set up notification backend: {why}");

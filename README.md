@@ -62,28 +62,50 @@ logging:
   # Whether to erase the log file on start
   erase_file_on_start: false
 
-# Notification service configuration.
-# This section can be omitted or set to null to disable.
-# Note that service errors are handled lazily.
-notification: !Pushsafer:
-  # Your private API key.
-  private_key: "abc123"
+# Notifications configuration
+notification:
+  # Backend to use for push notifications. This section can be omitted or set to null to disable.
+  push_backend: !Pushsafer:
+    # Your private API key.
+    private_key: "abc123"
 
-  # You may use device groups here, if you need to send notifications to multiple devices at once.
-  device: "my_device"
+    # You may use device groups here, if you need to send notifications to multiple devices at once.
+    device: "my_device"
+  
+  # ... or Home Assistant:
+  push_backend: !HassNotify
+    # The URL of your Home Assistant instance, including the protocol and port if necessary.
+    url: "http://123.456.789.012:8123"
 
-# ... or Home Assistant:
-notification: !HassNotify
-  # The URL of your Home Assistant instance, including the protocol and port if necessary.
-  url: "http://123.456.789.012:8123"
+    # Your long-lived access token.
+    token: "abc123"
 
-  # Your long-lived access token.
-  token: "abc123"
+    # The target `notify.` entity.
+    # Do not include the `notify.` prefix, only the entity ID.
+    # Use the grouping feature of Home Assistant to send notifications to multiple devices at once.
+    target: "mobile_app_abc123"
+  
+  # Configure which events should trigger notifications.
+  # These work regardless of whether the push backend is configured.
+  # The database is the primary storage for notifications, and the push backend is just a way to get them delivered to your devices.
+  # Custom notifications posted by the node are always enabled, and cannot be disabled.
+  # The default configuration has every notification disabled.
+  events:
+    # Whether to create a notification when an update is discovered for a node.
+    on_update_discovered: false
 
-  # The target `notify.` entity.
-  # Do not include the `notify.` prefix, only the entity ID.
-  # Use the grouping feature of Home Assistant to send notifications to multiple devices at once.
-  target: "mobile_app_abc123"
+    # Whether to create a notification when an update is successfully installed on a node.
+    on_update_success: true
+
+    # Whether to create a notification when an update fails to install on a node.
+    on_update_failed: true
+
+    # Whether to create a notification when a node posts new measurements.
+    # This is recommended for testing purposes, as it can be quite spammy.
+    on_measurements_posted: false
+
+    # Whether to create a notification when a node reports an error.
+    on_error_reported: true
 ```
 
 ## Database support
