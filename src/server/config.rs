@@ -76,7 +76,6 @@ pub struct NotificationEventsConfig {
     pub on_update_success: bool,
     pub on_update_failed: bool,
     pub on_measurements_posted: bool,
-    pub on_error_reported: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

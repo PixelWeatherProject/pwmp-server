@@ -103,9 +103,6 @@ notification:
     # Whether to create a notification when a node posts new measurements.
     # This is recommended for testing purposes, as it can be quite spammy.
     on_measurements_posted: false
-
-    # Whether to create a notification when a node reports an error.
-    on_error_reported: true
 ```
 
 ## Database support
