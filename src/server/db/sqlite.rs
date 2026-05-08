@@ -13,6 +13,7 @@ use sqlx::{
     sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous},
 };
 use std::{path::PathBuf, time::Duration};
+use tracing::debug;
 
 pub struct SqliteClient(Pool<Sqlite>);
 
@@ -26,6 +27,7 @@ impl SqliteClient {
         let opts = SqliteConnectOptions::new()
             .filename(path)
             .create_if_missing(true)
+            .read_only(false)
             .busy_timeout(Duration::from_secs(3))
             .optimize_on_close(true, None)
             .journal_mode(SqliteJournalMode::Wal)
@@ -351,5 +353,16 @@ impl super::DatabaseBackend for SqliteClient {
             .execute(&self.0)
             .await?;
         Ok(())
+    }
+}
+
+impl Drop for SqliteClient {
+    fn drop(&mut self) {
+        debug!("Closing SQLite database");
+        tokio::task::block_in_place(move || {
+            tokio::runtime::Handle::current().block_on(async move {
+                self.0.close().await;
+            });
+        });
     }
 }

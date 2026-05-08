@@ -13,6 +13,7 @@ use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
 };
 use std::time::Duration;
+use tracing::debug;
 
 pub struct PostgresClient(Pool<Postgres>);
 
@@ -356,5 +357,16 @@ impl super::DatabaseBackend for PostgresClient {
             .execute(&self.0)
             .await?;
         Ok(())
+    }
+}
+
+impl Drop for PostgresClient {
+    fn drop(&mut self) {
+        debug!("Closing Postgres database");
+        tokio::task::block_in_place(move || {
+            tokio::runtime::Handle::current().block_on(async move {
+                self.0.close().await;
+            });
+        });
     }
 }
