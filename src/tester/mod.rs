@@ -97,7 +97,9 @@ pub fn test(host: String, port: Option<u16>, raw_mac: String) {
         || client.check_os_update(Version::new(0, 0, 0)),
         &mut response_times,
     ) {
-        Ok(UpdateStatus::Available(..)) => {
+        Ok(UpdateStatus::Available(version)) => {
+            info!("Update to {version} available");
+
             loop {
                 debug!("Testing update chunk request");
 
