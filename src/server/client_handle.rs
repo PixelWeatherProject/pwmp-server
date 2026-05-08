@@ -5,7 +5,13 @@ use super::{
     db::DatabaseClient,
     rate_limit::RateLimiter,
 };
-use crate::{error::Error, server::db::DatabaseBackend};
+use crate::{
+    error::Error,
+    server::{
+        config::NotificationEventsConfig,
+        db::{DatabaseBackend, NodeId},
+    },
+};
 use pwmp_client::pwmp_msg::{request::Request, response::Response};
 use std::{io::Read, net::SocketAddr, sync::Arc, time::Duration};
 use tokio::{net::TcpStream, time::timeout};
@@ -56,7 +62,15 @@ pub async fn handle_client(
             break;
         }
 
-        match handle_request(request, &mut client, db, notify).await {
+        match handle_request(
+            request,
+            &mut client,
+            db,
+            notify,
+            &config.notification.events,
+        )
+        .await
+        {
             Ok(response) => {
                 if response.is_error() {
                     error!(
@@ -87,6 +101,7 @@ async fn handle_request(
     client: &mut Client<Authenticated>,
     db: &DatabaseClient,
     notify: &NotifySender,
+    notifs_cfg: &NotificationEventsConfig,
 ) -> Result<Response, Error> {
     debug!("Handling {req:#?}");
 
@@ -117,6 +132,20 @@ async fn handle_request(
                 db.post_results(client.id(), temperature, humidity, air_pressure)
                     .await?,
             );
+
+            if notifs_cfg.on_measurements_posted {
+                notify_send(
+                    notify,
+                    client.id(),
+                    db,
+                    format!(
+                        "{temperature:.02}°C, {humidity}%, {}hPa",
+                        air_pressure.map_or_else(|| "-".to_string(), |val| val.to_string())
+                    ),
+                )
+                .await?;
+            }
+
             Ok(Response::Ok)
         }
         Request::PostStats {
@@ -134,8 +163,7 @@ async fn handle_request(
             Ok(Response::Ok)
         }
         Request::SendNotification(message) => {
-            db.create_notification(client.id(), &message).await?;
-            notify_send(notify, format!("[Node #{}] {message}", client.id()).into()).await?;
+            notify_send(notify, client.id(), db, message).await?;
             Ok(Response::Ok)
         }
         Request::GetSettings => {
@@ -153,6 +181,17 @@ async fn handle_request(
 
             if let Some((version, firmware_blob)) = update_info {
                 client.store_update_check_result(current_ver, version, firmware_blob);
+
+                if notifs_cfg.on_update_discovered {
+                    notify_send(
+                        notify,
+                        client.id(),
+                        db,
+                        format!("Update {version} available, currently running {current_ver}"),
+                    )
+                    .await?;
+                }
+
                 Ok(Response::UpdateAvailable(version))
             } else {
                 client.mark_up_to_date();
@@ -190,6 +229,7 @@ async fn handle_request(
                         .expect("Client's update version was not set"),
                 )
                 .await?;
+
                 return Ok(Response::UpdateEnd);
             }
 
@@ -198,17 +238,57 @@ async fn handle_request(
         Request::ReportFirmwareUpdate(success) => {
             match db.mark_os_update_stat(client.id(), success).await {
                 Err(Error::InvalidRequest) => Ok(Response::InvalidRequest),
-                Err(why) => Err(why),
-                Ok(()) => Ok(Response::Ok),
+                Err(why) => {
+                    if notifs_cfg.on_update_failed {
+                        notify_send(
+                            notify,
+                            client.id(),
+                            db,
+                            format!("Failed to updated to {}", client.update_version().unwrap()),
+                        )
+                        .await?;
+                    }
+
+                    Err(why)
+                }
+                Ok(()) => {
+                    if notifs_cfg.on_update_success {
+                        notify_send(
+                            notify,
+                            client.id(),
+                            db,
+                            format!(
+                                "Successfully to updated to {}",
+                                client.update_version().unwrap()
+                            ),
+                        )
+                        .await?;
+                    }
+
+                    Ok(Response::Ok)
+                }
             }
         }
         Request::Bye => unreachable!(),
     }
 }
 
-async fn notify_send(notify: &NotifySender, message: Box<str>) -> Result<(), Error> {
+async fn notify_send<S: AsRef<str>>(
+    notify: &NotifySender,
+    node_id: NodeId,
+    db_client: &DatabaseClient,
+    message: S,
+) -> Result<(), Error> {
+    // The push notification should include a node ID
+    let push_message = format!("[Node #{node_id}] {}", message.as_ref()).into_boxed_str();
+
+    // The database already links messages to nodes, so we don't need to include the ID
+    db_client
+        .create_notification(node_id, message.as_ref())
+        .await?;
+
     notify
-        .send_timeout(message, Duration::from_secs(3))
+        .send_timeout(push_message, Duration::from_secs(3))
         .await
         .map_err(|_| Error::NotifyMpscSendTimeout)
 }
