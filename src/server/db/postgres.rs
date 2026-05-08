@@ -339,7 +339,7 @@ impl super::DatabaseBackend for PostgresClient {
     #[tracing::instrument(
         name = "PostgresClient::upload_firmware()",
         level = "debug",
-        skip(self),
+        skip(self, blob),
         err
     )]
     async fn upload_firmware(

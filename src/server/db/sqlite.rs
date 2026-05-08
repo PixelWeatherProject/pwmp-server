@@ -331,7 +331,7 @@ impl super::DatabaseBackend for SqliteClient {
     #[tracing::instrument(
         name = "SqliteClient::upload_firmware()",
         level = "debug",
-        skip(self),
+        skip(self, blob),
         err
     )]
     async fn upload_firmware(
