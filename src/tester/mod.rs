@@ -7,6 +7,7 @@ use std::{
     process::exit,
     str::FromStr,
     sync::atomic::{AtomicU32, Ordering},
+    thread::sleep,
     time::{Duration, Instant},
 };
 use tracing::{debug, error, info};
@@ -98,12 +99,12 @@ pub fn test(host: String, port: Option<u16>, raw_mac: String) {
         &mut response_times,
     ) {
         Ok(UpdateStatus::Available(version)) => {
-            info!("Update to {version} available");
+            debug!("Update to {version} available");
 
             loop {
                 debug!("Testing update chunk request");
 
-                match client.next_update_chunk(None) {
+                match client.next_update_chunk(Some(100_000 /* 100kB */)) {
                     Err(why) => {
                         error!("Failed: {why}");
                         exit(1);
@@ -111,6 +112,8 @@ pub fn test(host: String, port: Option<u16>, raw_mac: String) {
                     Ok(None) => break,
                     Ok(..) => (),
                 }
+
+                sleep(Duration::from_millis(100));
             }
 
             debug!("Testing firmware report");
@@ -119,7 +122,9 @@ pub fn test(host: String, port: Option<u16>, raw_mac: String) {
                 exit(1);
             }
         }
-        Ok(_) => (),
+        Ok(UpdateStatus::UpToDate) => {
+            debug!("No update available");
+        }
         Err(why) => {
             error!("Failed: {why}");
             exit(1);
