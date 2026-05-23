@@ -32,4 +32,9 @@ WHERE
       AND fs.to_version_major = f.version_major
       AND fs.to_version_middle = f.version_middle
       AND fs.to_version_minor = f.version_minor
-  );
+  )
+ORDER BY
+  f.version_major DESC,
+  f.version_middle DESC,
+  f.version_minor DESC
+LIMIT 1;
