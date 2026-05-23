@@ -24,7 +24,6 @@ sqlx = { version = "0.9.0", default-features = false, features = [
     "postgres",
     "runtime-tokio",
     "sqlite",
-    "tls-rustls",
 ] }
 tokio = { version = "1.52.3", default-features = false, features = [
     "rt-multi-thread",

@@ -35,7 +35,6 @@ pub enum DatabaseConfig {
         user: Box<str>,
         password: Box<str>,
         name: Box<str>,
-        ssl: bool,
     },
     Sqlite {
         file: PathBuf,
@@ -117,7 +116,6 @@ impl Default for DatabaseConfig {
             user: "root".into(),
             password: "root".into(),
             name: "pixelweather".into(),
-            ssl: false,
         }
     }
 }

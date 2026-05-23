@@ -101,9 +101,8 @@ impl DatabaseClient {
                 user,
                 password,
                 name,
-                ssl,
             } => Ok(Self::Postgres(
-                postgres::PostgresClient::new(host, *port, user, password, name, *ssl).await?,
+                postgres::PostgresClient::new(host, *port, user, password, name).await?,
             )),
             DatabaseConfig::Sqlite { file } => {
                 Ok(Self::Sqlite(sqlite::SqliteClient::new(file).await?))

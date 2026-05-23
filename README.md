@@ -27,7 +27,6 @@ database: !Postgres
   user: "root"
   password: "root"
   name: "pixelweather"
-  ssl: false
 
 # ... or SQLite:
 database: !Sqlite
