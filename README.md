@@ -116,6 +116,8 @@ PostgreSQL is the recommended database for production use with a large number of
 SQLite will perform a lot faster (min/max/avg response times <1ms) but offers less type safety and may result in slightly higher CPU and RAM usage due to not supporting certain features that have to be emulated with multiple queries or additional logic.
 PostgreSQL causes higher latency (min/max/avg response times >10ms) but has higher priority when it comes to features.
 
+If you chose to use PostgreSQL, note that SSL is not supported. Securing your database is your responsibility, and it's recommended to use a private network or simply not expose the database to the internet.
+
 ## Using as a service
 The CLI has a `service` subcommand, which allows managing a background service.
 
