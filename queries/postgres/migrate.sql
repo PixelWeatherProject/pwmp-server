@@ -82,6 +82,32 @@ CREATE TABLE
         success BOOLEAN DEFAULT NULL
     );
 
+--
+-- INDEXES
+--
+
+-- measurements per device / time-series access
+CREATE INDEX idx_measurements_node_when ON measurements (node, "when" DESC);
+
+-- stats lookup/delete by measurement FK
+CREATE INDEX idx_statistics_measurement ON statistics (measurement);
+
+-- notifications per node
+CREATE INDEX idx_notifications_node_when ON notifications (node, "when" DESC);
+
+-- update-report lookup: get latest pending update for node
+CREATE INDEX idx_firmware_stats_pending_node_when
+ON firmware_stats (node, "when" DESC)
+WHERE success IS NULL;
+
+-- check whether a node already tried a target firmware
+CREATE INDEX idx_firmware_stats_node_target_version
+ON firmware_stats (node, to_version_major, to_version_middle, to_version_minor);
+
+-- firmware version comparisons
+CREATE INDEX idx_firmwares_version
+ON firmwares (version_major, version_middle, version_minor);
+
 -- 
 -- HELPER FUNCTIONS
 -- 
