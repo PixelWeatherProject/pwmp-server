@@ -13,7 +13,7 @@ use crate::{
     },
 };
 use pwmp_client::pwmp_msg::{request::Request, response::Response};
-use std::{io::Read, net::SocketAddr, sync::Arc, time::Duration};
+use std::{io::Read, net::SocketAddr, sync::Arc};
 use tokio::{net::TcpStream, time::timeout};
 use tracing::{debug, error, warn};
 
@@ -288,7 +288,6 @@ async fn notify_send<S: AsRef<str>>(
         .await?;
 
     notify
-        .send_timeout(push_message, Duration::from_secs(3))
-        .await
-        .map_err(|_| Error::NotifyMpscSendTimeout)
+        .try_send(push_message)
+        .map_err(|_| Error::MpscTrySend)
 }
