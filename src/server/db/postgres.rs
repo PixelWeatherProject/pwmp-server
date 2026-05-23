@@ -10,7 +10,7 @@ use pwmp_client::pwmp_msg::{
 };
 use sqlx::{
     Pool, Postgres, Row,
-    postgres::{PgConnectOptions, PgPoolOptions},
+    postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
 };
 use std::time::Duration;
 use tracing::debug;
@@ -25,14 +25,19 @@ impl PostgresClient {
         user: &str,
         password: &str,
         name: &str,
+        ssl: bool,
     ) -> Result<Self, Error> {
-        let opts = PgConnectOptions::new()
+        let mut opts = PgConnectOptions::new()
             .host(host)
             .port(port)
             .username(user)
             .password(password)
             .database(name)
             .application_name("pwmp-server");
+
+        if ssl {
+            opts = opts.ssl_mode(PgSslMode::Require);
+        }
 
         let pool = PgPoolOptions::new()
             .max_connections(3)
