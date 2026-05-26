@@ -16,8 +16,9 @@ The server will read the configuration file from `~/.config/pwmp-server/config.y
 ### Defaults
 ```yml
 # Server binding
-host: "0.0.0.0"
-port: 55300
+server:
+  host: 0.0.0.0
+  port: 55300
 
 # Database connection settings.
 # PostgreSQL or SQLite are supported.
