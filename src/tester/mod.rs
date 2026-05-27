@@ -75,7 +75,7 @@ pub fn test(host: String, port: Option<u16>, raw_mac: String) {
     debug!("Testing measurement posting");
     if let Err(why) = qbench(
         "post 1",
-        || client.post_measurements(0.00, 0, Some(0), 0.00, 20.0, "<PWMP Test>", -50),
+        || client.post_measurements(0.00, 0, Some(0), 0.00, 20.0, "<PWMP Test>".into(), -50),
         &mut response_times,
     ) {
         error!("Failed: {why}");
