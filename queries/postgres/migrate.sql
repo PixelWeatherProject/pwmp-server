@@ -23,6 +23,10 @@ CREATE TABLE
             AND humidity <= 100
         ),
         air_pressure SMALLINT DEFAULT NULL,
+        cpu_temp REAL NOT NULL CHECK (
+            temperature > -100.00
+            AND temperature < 100.00
+        ),
         battery REAL NOT NULL CHECK (
             battery > 0
             AND battery < 5.00
