@@ -1,6 +1,5 @@
 use super::db::{DatabaseClient, FirmwareBlob, MeasurementId, NodeId};
 use crate::{error::Error, server::db::DatabaseBackend};
-use circular_queue::CircularQueue;
 use pwmp_client::pwmp_msg::{
     Message, MsgId, mac::Mac, request::Request, response::Response, version::Version,
 };
@@ -12,15 +11,13 @@ use tokio::{
 use tracing::{debug, error, warn};
 
 const RCV_BUFFER_SIZE: usize = 1024;
-const ID_CACHE_SIZE: usize = 32;
 type Result<T> = ::std::result::Result<T, Error>;
 type MsgLength = u32;
 
 pub struct Client<S> {
     stream: TcpStream,
     buf: [u8; RCV_BUFFER_SIZE],
-    id_cache: CircularQueue<MsgId>,
-    last_id: MsgId,
+    last_id: Option<MsgId>,
     state: S,
     peer_addr: Box<str>,
 }
@@ -50,8 +47,13 @@ pub struct Authenticated {
 impl<S> Client<S> {
     pub async fn send_response(&mut self, res: Response) -> Result<()> {
         debug!("{}: responding with {res:?}", self.peer_addr);
-        self.last_id += 1;
-        self.send_message(Message::new_response(res, self.last_id))
+
+        match self.last_id {
+            Some(id) => self.last_id = Some(id + 1),
+            None => self.last_id = Some(0),
+        }
+
+        self.send_message(Message::new_response(res, self.last_id.unwrap()))
             .await
     }
 
@@ -128,20 +130,19 @@ impl<S> Client<S> {
             Message::deserialize(&self.buf[..message_length]).ok_or(Error::MessageParse)?;
 
         // Check if it's not a duplicate.
-        if self.is_id_cached(message.id()) {
+        if self.check_id_conflict(message.id()) {
             return Err(Error::DuplicateMessage);
         }
 
         // Cache the ID.
-        self.id_cache.push(message.id());
+        self.last_id = Some(message.id());
 
         // Done
         Ok(message)
     }
 
-    fn is_id_cached(&self, id: MsgId) -> bool {
-        // Check if the ID matches any of the cached ones.
-        self.id_cache.iter().any(|candidate| candidate == &id)
+    fn check_id_conflict(&self, id: MsgId) -> bool {
+        self.last_id == Some(id)
     }
 }
 
@@ -150,8 +151,7 @@ impl Client<Unathenticated> {
         Self {
             stream: socket,
             buf: [0; RCV_BUFFER_SIZE],
-            id_cache: CircularQueue::with_capacity(ID_CACHE_SIZE),
-            last_id: 1,
+            last_id: None,
             state: Unathenticated,
             peer_addr: peer_addr.to_string().into_boxed_str(),
         }
@@ -210,7 +210,6 @@ impl Client<Authenticated> {
         Self {
             stream: client.stream,
             buf: client.buf,
-            id_cache: client.id_cache,
             last_id: client.last_id,
             state: Authenticated {
                 id,
@@ -232,10 +231,6 @@ impl Client<Authenticated> {
 
     pub const fn last_submit(&self) -> Option<MeasurementId> {
         self.state.last_submit
-    }
-
-    pub const fn set_last_submit(&mut self, value: MeasurementId) {
-        self.state.last_submit = Some(value);
     }
 
     pub fn mark_up_to_date(&mut self) {
