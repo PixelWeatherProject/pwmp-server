@@ -1,6 +1,4 @@
-use super::{
-    EraseOptions, FirmwareBlob, FirmwareEntry, MeasurementId, NodeId, SleepTime, UpdateStatId,
-};
+use super::{EraseOptions, FirmwareBlob, FirmwareEntry, NodeId, SleepTime, UpdateStatId};
 use crate::error::Error;
 use pwmp_client::pwmp_msg::{
     aliases::{AirPressure, BatteryVoltage, Humidity, Rssi, Temperature},
@@ -150,13 +148,13 @@ impl super::DatabaseBackend for PostgresClient {
         battery: BatteryVoltage,
         wifi_ssid: &str,
         wifi_rssi: Rssi,
-    ) -> Result<MeasurementId, Error> {
+    ) -> Result<(), Error> {
         let signed_air_p: Option<i16> = match air_p {
             Some(value) => Some(value.try_into()?),
             None => None,
         };
 
-        let result = sqlx::query_scalar(include_str!(
+        sqlx::query(include_str!(
             "../../../queries/postgres/post_measurements.sql"
         ))
         .bind(node)
@@ -167,10 +165,10 @@ impl super::DatabaseBackend for PostgresClient {
         .bind(battery)
         .bind(wifi_ssid)
         .bind(wifi_rssi)
-        .fetch_one(&self.0)
+        .execute(&self.0)
         .await?;
 
-        Ok(result)
+        Ok(())
     }
 
     #[tracing::instrument(

@@ -1,6 +1,4 @@
-use super::{
-    EraseOptions, FirmwareBlob, FirmwareEntry, MeasurementId, NodeId, SleepTime, UpdateStatId,
-};
+use super::{EraseOptions, FirmwareBlob, FirmwareEntry, NodeId, SleepTime, UpdateStatId};
 use crate::error::Error;
 use pwmp_client::pwmp_msg::{
     aliases::{AirPressure, BatteryVoltage, Humidity, Rssi, Temperature},
@@ -141,8 +139,8 @@ impl super::DatabaseBackend for SqliteClient {
         battery: BatteryVoltage,
         wifi_ssid: &str,
         wifi_rssi: Rssi,
-    ) -> Result<MeasurementId, Error> {
-        let result = sqlx::query_scalar(include_str!(
+    ) -> Result<(), Error> {
+        sqlx::query(include_str!(
             "../../../queries/sqlite/post_measurements.sql"
         ))
         .bind(node)
@@ -153,10 +151,10 @@ impl super::DatabaseBackend for SqliteClient {
         .bind(battery)
         .bind(wifi_ssid)
         .bind(wifi_rssi)
-        .fetch_one(&self.0)
+        .execute(&self.0)
         .await?;
 
-        Ok(result)
+        Ok(())
     }
 
     #[tracing::instrument(

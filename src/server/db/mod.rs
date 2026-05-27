@@ -56,7 +56,7 @@ pub trait DatabaseBackend {
         battery: BatteryVoltage,
         wifi_ssid: &str,
         wifi_rssi: Rssi,
-    ) -> Result<MeasurementId, Error>;
+    ) -> Result<(), Error>;
 
     async fn run_migrations(&self) -> Result<(), Error>;
 
@@ -140,7 +140,7 @@ impl DatabaseBackend for DatabaseClient {
         battery: BatteryVoltage,
         wifi_ssid: &str,
         wifi_rssi: i8,
-    ) -> Result<MeasurementId, Error> {
+    ) -> Result<(), Error> {
         match self {
             Self::Postgres(client) => {
                 client
