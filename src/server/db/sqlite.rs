@@ -131,40 +131,32 @@ impl super::DatabaseBackend for SqliteClient {
         err,
         ret
     )]
-    async fn post_results(
+    async fn post_measurements(
         &self,
         node: NodeId,
         temp: Temperature,
         hum: Humidity,
         air_p: Option<AirPressure>,
-    ) -> Result<MeasurementId, Error> {
-        let result = sqlx::query_scalar(include_str!("../../../queries/sqlite/post_results.sql"))
-            .bind(node)
-            .bind(temp)
-            .bind(hum)
-            .bind(air_p)
-            .fetch_one(&self.0)
-            .await?;
-
-        Ok(result)
-    }
-
-    #[tracing::instrument(name = "SqliteClient::post_stats()", level = "debug", skip(self), err)]
-    async fn post_stats(
-        &self,
-        measurement: MeasurementId,
+        cpu_temp: Temperature,
         battery: BatteryVoltage,
         wifi_ssid: &str,
         wifi_rssi: Rssi,
-    ) -> Result<(), Error> {
-        sqlx::query(include_str!("../../../queries/sqlite/post_stats.sql"))
-            .bind(measurement)
-            .bind(battery)
-            .bind(wifi_ssid)
-            .bind(wifi_rssi)
-            .execute(&self.0)
-            .await?;
-        Ok(())
+    ) -> Result<MeasurementId, Error> {
+        let result = sqlx::query_scalar(include_str!(
+            "../../../queries/sqlite/post_measurements.sql"
+        ))
+        .bind(node)
+        .bind(temp)
+        .bind(hum)
+        .bind(air_p)
+        .bind(cpu_temp)
+        .bind(battery)
+        .bind(wifi_ssid)
+        .bind(wifi_rssi)
+        .fetch_one(&self.0)
+        .await?;
+
+        Ok(result)
     }
 
     #[tracing::instrument(

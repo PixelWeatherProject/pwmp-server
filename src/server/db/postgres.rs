@@ -140,50 +140,37 @@ impl super::DatabaseBackend for PostgresClient {
         err,
         ret
     )]
-    async fn post_results(
+    async fn post_measurements(
         &self,
         node: NodeId,
         temp: Temperature,
         hum: Humidity,
         air_p: Option<AirPressure>,
+        cpu_temp: Temperature,
+        battery: BatteryVoltage,
+        wifi_ssid: &str,
+        wifi_rssi: Rssi,
     ) -> Result<MeasurementId, Error> {
         let signed_air_p: Option<i16> = match air_p {
             Some(value) => Some(value.try_into()?),
             None => None,
         };
 
-        let result = sqlx::query_scalar(include_str!("../../../queries/postgres/post_results.sql"))
-            .bind(node)
-            .bind(temp)
-            .bind(i16::from(hum))
-            .bind(signed_air_p)
-            .fetch_one(&self.0)
-            .await?;
+        let result = sqlx::query_scalar(include_str!(
+            "../../../queries/postgres/post_measurements.sql"
+        ))
+        .bind(node)
+        .bind(temp)
+        .bind(i16::from(hum))
+        .bind(signed_air_p)
+        .bind(cpu_temp)
+        .bind(battery)
+        .bind(wifi_ssid)
+        .bind(wifi_rssi)
+        .fetch_one(&self.0)
+        .await?;
 
         Ok(result)
-    }
-
-    #[tracing::instrument(
-        name = "PostgresClient::post_stats()",
-        level = "debug",
-        skip(self),
-        err
-    )]
-    async fn post_stats(
-        &self,
-        measurement: MeasurementId,
-        battery: BatteryVoltage,
-        wifi_ssid: &str,
-        wifi_rssi: Rssi,
-    ) -> Result<(), Error> {
-        sqlx::query(include_str!("../../../queries/postgres/post_stats.sql"))
-            .bind(measurement)
-            .bind(battery)
-            .bind(wifi_ssid)
-            .bind(i16::from(wifi_rssi))
-            .execute(&self.0)
-            .await?;
-        Ok(())
     }
 
     #[tracing::instrument(

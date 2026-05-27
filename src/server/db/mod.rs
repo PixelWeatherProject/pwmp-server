@@ -46,21 +46,17 @@ pub trait DatabaseBackend {
 
     async fn get_settings(&self, node_id: NodeId) -> Result<Option<NodeSettings>, Error>;
 
-    async fn post_results(
+    async fn post_measurements(
         &self,
         node: NodeId,
         temp: Temperature,
         hum: Humidity,
         air_p: Option<AirPressure>,
-    ) -> Result<MeasurementId, Error>;
-
-    async fn post_stats(
-        &self,
-        measurement: MeasurementId,
+        cpu_temp: Temperature,
         battery: BatteryVoltage,
         wifi_ssid: &str,
         wifi_rssi: Rssi,
-    ) -> Result<(), Error>;
+    ) -> Result<MeasurementId, Error>;
 
     async fn run_migrations(&self) -> Result<(), Error>;
 
@@ -134,35 +130,30 @@ impl DatabaseBackend for DatabaseClient {
         }
     }
 
-    async fn post_results(
+    async fn post_measurements(
         &self,
         node: NodeId,
         temp: Temperature,
         hum: Humidity,
         air_p: Option<AirPressure>,
-    ) -> Result<MeasurementId, Error> {
-        match self {
-            Self::Postgres(client) => client.post_results(node, temp, hum, air_p).await,
-            Self::Sqlite(client) => client.post_results(node, temp, hum, air_p).await,
-        }
-    }
-
-    async fn post_stats(
-        &self,
-        measurement: MeasurementId,
+        cpu_temp: Temperature,
         battery: BatteryVoltage,
         wifi_ssid: &str,
-        wifi_rssi: Rssi,
-    ) -> Result<(), Error> {
+        wifi_rssi: i8,
+    ) -> Result<MeasurementId, Error> {
         match self {
             Self::Postgres(client) => {
                 client
-                    .post_stats(measurement, battery, wifi_ssid, wifi_rssi)
+                    .post_measurements(
+                        node, temp, hum, air_p, cpu_temp, battery, wifi_ssid, wifi_rssi,
+                    )
                     .await
             }
             Self::Sqlite(client) => {
                 client
-                    .post_stats(measurement, battery, wifi_ssid, wifi_rssi)
+                    .post_measurements(
+                        node, temp, hum, air_p, cpu_temp, battery, wifi_ssid, wifi_rssi,
+                    )
                     .await
             }
         }

@@ -111,10 +111,14 @@ async fn handle_request(
             warn!("Received another handshake message");
             Ok(Response::InvalidRequest)
         }
-        Request::PostResults {
+        Request::PostMeasurements {
             temperature,
             humidity,
             air_pressure,
+            battery,
+            cpu_temp,
+            wifi_ssid,
+            wifi_rssi,
         } => {
             if client.last_submit().is_some() {
                 error!(
@@ -129,7 +133,7 @@ async fn handle_request(
                 client.id()
             );
             client.set_last_submit(
-                db.post_results(client.id(), temperature, humidity, air_pressure)
+                db.post_measurements(client.id(), temperature, humidity, air_pressure)
                     .await?,
             );
 
@@ -146,20 +150,6 @@ async fn handle_request(
                 .await?;
             }
 
-            Ok(Response::Ok)
-        }
-        Request::PostStats {
-            battery,
-            wifi_ssid,
-            wifi_rssi,
-        } => {
-            let Some(last_measurement_id) = client.last_submit() else {
-                error!("{}: Missing measurement", client.id());
-                return Ok(Response::InvalidRequest);
-            };
-
-            db.post_stats(last_measurement_id, battery, &wifi_ssid, wifi_rssi)
-                .await?;
             Ok(Response::Ok)
         }
         Request::SendNotification(message) => {
