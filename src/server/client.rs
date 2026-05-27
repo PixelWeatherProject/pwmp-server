@@ -17,6 +17,7 @@ type MsgLength = u32;
 pub struct Client<S> {
     stream: TcpStream,
     buf: [u8; RCV_BUFFER_SIZE],
+    id: MsgId,
     last_id: Option<MsgId>,
     state: S,
     peer_addr: Box<str>,
@@ -48,13 +49,8 @@ impl<S> Client<S> {
     pub async fn send_response(&mut self, res: Response) -> Result<()> {
         debug!("{}: responding with {res:?}", self.peer_addr);
 
-        match self.last_id {
-            Some(id) => self.last_id = Some(id + 1),
-            None => self.last_id = Some(0),
-        }
-
-        self.send_message(Message::new_response(res, self.last_id.unwrap()))
-            .await
+        self.id += 1;
+        self.send_message(Message::new_response(res, self.id)).await
     }
 
     pub async fn receive_request(&mut self) -> Result<Request> {
@@ -151,6 +147,7 @@ impl Client<Unathenticated> {
         Self {
             stream: socket,
             buf: [0; RCV_BUFFER_SIZE],
+            id: 0,
             last_id: None,
             state: Unathenticated,
             peer_addr: peer_addr.to_string().into_boxed_str(),
@@ -210,6 +207,7 @@ impl Client<Authenticated> {
         Self {
             stream: client.stream,
             buf: client.buf,
+            id: client.id,
             last_id: client.last_id,
             state: Authenticated {
                 id,
