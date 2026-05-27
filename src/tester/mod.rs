@@ -6,13 +6,13 @@ use pwmp_client::{
 use std::{
     process::exit,
     str::FromStr,
-    sync::atomic::{AtomicU32, Ordering},
+    sync::atomic::{AtomicU8, Ordering},
     thread::sleep,
     time::{Duration, Instant},
 };
 use tracing::{debug, error, info};
 
-static COUNTER: AtomicU32 = AtomicU32::new(1);
+static COUNTER: AtomicU8 = AtomicU8::new(1);
 
 /// Try to connect to a server and authenticate with the given MAC address to
 /// check if the server is working properly.
@@ -75,17 +75,7 @@ pub fn test(host: String, port: Option<u16>, raw_mac: String) {
     debug!("Testing measurement posting");
     if let Err(why) = qbench(
         "post 1",
-        || client.post_measurements(0.00, 0, Some(0)),
-        &mut response_times,
-    ) {
-        error!("Failed: {why}");
-        exit(1);
-    }
-
-    debug!("Testing stats posting");
-    if let Err(why) = qbench(
-        "post 2",
-        || client.post_stats(3.70, "<PWMP Test>", -50),
+        || client.post_measurements(0.00, 0, Some(0), 0.00, 20.0, "<PWMP Test>", -50),
         &mut response_times,
     ) {
         error!("Failed: {why}");
