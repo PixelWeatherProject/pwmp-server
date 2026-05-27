@@ -22,13 +22,7 @@ CREATE TABLE
             humidity >= 0
             AND humidity <= 100
         ),
-        air_pressure SMALLINT DEFAULT NULL
-    );
-
-CREATE TABLE
-    statistics (
-        id SERIAL PRIMARY KEY,
-        measurement INT4 NOT NULL REFERENCES measurements (id),
+        air_pressure SMALLINT DEFAULT NULL,
         battery REAL NOT NULL CHECK (
             battery > 0
             AND battery < 5.00
@@ -88,9 +82,6 @@ CREATE TABLE
 
 -- measurements per device / time-series access
 CREATE INDEX idx_measurements_node_when ON measurements (node, "when" DESC);
-
--- stats lookup/delete by measurement FK
-CREATE INDEX idx_statistics_measurement ON statistics (measurement);
 
 -- notifications per node
 CREATE INDEX idx_notifications_node_when ON notifications (node, "when" DESC);
