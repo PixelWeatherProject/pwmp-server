@@ -1,6 +1,6 @@
 [package]
 name = "pwmp-server"
-version = "2.4.3"
+version = "3.0.0"
 edition = "2024"
 authors = ["Fábián Varga <23280129+br0kenpixel@users.noreply.github.com>"]
 description = "The PixelWeather Messaging Protocol server."
@@ -18,7 +18,7 @@ panic = "abort"
 opt-level = 3
 
 [dependencies]
-pwmp-client = { git = "https://github.com/PixelWeatherProject/pwmp-client.git", tag = "v2.2.4" }
+pwmp-client = { git = "https://github.com/PixelWeatherProject/pwmp-client.git", tag = "v3.0.0" }
 time = { version = "0.3.47", default-features = false, features = ["macros"] }
 sqlx = { version = "0.9.0", default-features = false, features = [
     "postgres",
