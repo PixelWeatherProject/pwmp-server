@@ -132,10 +132,17 @@ async fn handle_request(
                 "{}: {temperature:.02}°C, {humidity}%, {air_pressure:?}hPa",
                 client.id()
             );
-            client.set_last_submit(
-                db.post_measurements(client.id(), temperature, humidity, air_pressure)
-                    .await?,
-            );
+            db.post_measurements(
+                client.id(),
+                temperature,
+                humidity,
+                air_pressure,
+                cpu_temp,
+                battery,
+                &wifi_ssid,
+                wifi_rssi,
+            )
+            .await?;
 
             if notifs_cfg.on_measurements_posted {
                 notify_send(
