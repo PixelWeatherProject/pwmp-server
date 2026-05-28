@@ -14,6 +14,7 @@ use std::{
 pub struct Config {
     pub server: ServerConfig,
     pub database: DatabaseConfig,
+    pub cache: CacheConfig,
     pub limits: LimitsConfig,
     #[serde(rename = "rate_limiter")]
     pub rate_limits: RateLimitConfig,
@@ -40,6 +41,15 @@ pub enum DatabaseConfig {
     Sqlite {
         file: PathBuf,
     },
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CacheConfig {
+    pub auth_ttl: Duration,
+    pub auth_capacity: u64,
+
+    pub settings_ttl: Duration,
+    pub settings_capacity: u64,
 }
 
 #[serde_as]
@@ -118,6 +128,17 @@ impl Default for DatabaseConfig {
             password: "root".into(),
             name: "pixelweather".into(),
             ssl: false,
+        }
+    }
+}
+
+impl Default for CacheConfig {
+    fn default() -> Self {
+        Self {
+            auth_ttl: Duration::from_hours(1),
+            auth_capacity: 10,
+            settings_ttl: Duration::from_hours(1),
+            settings_capacity: 10,
         }
     }
 }
