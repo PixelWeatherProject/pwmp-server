@@ -156,7 +156,7 @@ impl DatabaseBackend for DatabaseClient {
 
         let maybe_id = self.backend.authorize_device(mac).await?;
         self.node_id_cache.insert(*mac, maybe_id).await;
-        Ok(None)
+        Ok(maybe_id)
     }
 
     async fn create_notification(&self, node_id: NodeId, content: &str) -> Result<(), Error> {
@@ -173,7 +173,7 @@ impl DatabaseBackend for DatabaseClient {
 
         let settings = self.backend.get_settings(node_id).await?;
         self.node_settings_cache.insert(node_id, settings).await;
-        Ok(None)
+        Ok(settings)
     }
 
     async fn post_measurements(
