@@ -25,10 +25,12 @@ pub type UpdateStatId = i32;
 pub type SleepTime = i16;
 
 type NodeIdCache = Cache<Mac, NodeId>;
+type NodeSettingsCache = Cache<NodeId, Option<NodeSettings>>;
 
 pub struct DatabaseClient {
     backend: Box<dyn DatabaseBackend>,
     node_id_cache: NodeIdCache,
+    node_settings_cache: NodeSettingsCache,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -105,7 +107,16 @@ impl DatabaseClient {
             .time_to_live(Duration::from_hours(1))
             .async_eviction_listener(|k, v, c| {
                 Box::pin(async move {
-                    debug!("Evicted Node ID mapping {k}<=>{v} from cache: {c:?}");
+                    debug!("Auth cache evicted mapping '{k}'<=>'{v}': {c:?}");
+                })
+            })
+            .build();
+        let node_settings_cache = NodeSettingsCache::builder()
+            .max_capacity(100)
+            .time_to_live(Duration::from_hours(1))
+            .async_eviction_listener(|k, _, c| {
+                Box::pin(async move {
+                    debug!("Settings cache evicted node '{k}': {c:?}");
                 })
             })
             .build();
@@ -123,10 +134,12 @@ impl DatabaseClient {
                     PostgresClient::new(host, *port, user, password, name, *ssl).await?,
                 ),
                 node_id_cache,
+                node_settings_cache,
             }),
             DatabaseConfig::Sqlite { file } => Ok(Self {
                 backend: Box::new(SqliteClient::new(file).await?),
                 node_id_cache,
+                node_settings_cache,
             }),
         }
     }
@@ -136,11 +149,11 @@ impl DatabaseClient {
 impl DatabaseBackend for DatabaseClient {
     async fn authorize_device(&self, mac: &Mac) -> Result<Option<NodeId>, Error> {
         if let Some(id) = self.node_id_cache.get(mac).await {
-            debug!("Node ID cache hit for '{mac}' -> '{id}'");
+            debug!("Auth cache hit for '{mac}' -> '{id}'");
             return Ok(Some(id));
         }
 
-        debug!("Node ID cache miss for '{mac}'");
+        debug!("Auth cache miss for '{mac}'");
 
         if let Some(id) = self.backend.authorize_device(mac).await? {
             self.node_id_cache.insert(*mac, id).await;
@@ -155,7 +168,17 @@ impl DatabaseBackend for DatabaseClient {
     }
 
     async fn get_settings(&self, node_id: NodeId) -> Result<Option<NodeSettings>, Error> {
-        self.backend.get_settings(node_id).await
+        if let Some(settings) = self.node_settings_cache.get(&node_id).await {
+            debug!("Settings cache hit for '{node_id}'");
+            return Ok(settings);
+        }
+
+        debug!("Settings cache miss for '{node_id}'");
+
+        let settings = self.backend.get_settings(node_id).await?;
+        self.node_settings_cache.insert(node_id, settings).await;
+
+        Ok(None)
     }
 
     async fn post_measurements(
