@@ -1,13 +1,19 @@
 use crate::{
     error::Error,
-    server::config::{Config, DatabaseConfig},
+    server::{
+        config::{Config, DatabaseConfig},
+        db::{postgres::PostgresClient, sqlite::SqliteClient},
+    },
 };
+use moka::future::Cache;
 use pwmp_client::pwmp_msg::{
     aliases::{AirPressure, BatteryVoltage, Humidity, Rssi, Temperature},
     mac::Mac,
     settings::NodeSettings,
     version::Version,
 };
+use std::time::Duration;
+use tracing::debug;
 
 mod postgres;
 mod sqlite;
@@ -18,9 +24,11 @@ pub type FirmwareBlob = Box<[u8]>;
 pub type UpdateStatId = i32;
 pub type SleepTime = i16;
 
-pub enum DatabaseClient {
-    Postgres(postgres::PostgresClient),
-    Sqlite(sqlite::SqliteClient),
+type NodeIdCache = Cache<Mac, NodeId>;
+
+pub struct DatabaseClient {
+    backend: Box<dyn DatabaseBackend>,
+    node_id_cache: NodeIdCache,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -39,6 +47,7 @@ pub struct FirmwareEntry {
     pub restrict: Option<Vec<NodeId>>,
 }
 
+#[async_trait::async_trait]
 pub trait DatabaseBackend: Send + Sync {
     async fn authorize_device(&self, mac: &Mac) -> Result<Option<NodeId>, Error>;
 
@@ -91,6 +100,16 @@ pub trait DatabaseBackend: Send + Sync {
 impl DatabaseClient {
     #[tracing::instrument(name = "DatabaseClient::new()", level = "debug", err, skip_all)]
     pub async fn new(config: &Config) -> Result<Self, Error> {
+        let node_id_cache = NodeIdCache::builder()
+            .max_capacity(100)
+            .time_to_live(Duration::from_hours(1))
+            .async_eviction_listener(|k, v, c| {
+                Box::pin(async move {
+                    debug!("Evicted Node ID mapping {k}<=>{v} from cache: {c:?}");
+                })
+            })
+            .build();
+
         match &config.database {
             DatabaseConfig::Postgres {
                 host,
@@ -99,36 +118,44 @@ impl DatabaseClient {
                 password,
                 name,
                 ssl,
-            } => Ok(Self::Postgres(
-                postgres::PostgresClient::new(host, *port, user, password, name, *ssl).await?,
-            )),
-            DatabaseConfig::Sqlite { file } => {
-                Ok(Self::Sqlite(sqlite::SqliteClient::new(file).await?))
-            }
+            } => Ok(Self {
+                backend: Box::new(
+                    PostgresClient::new(host, *port, user, password, name, *ssl).await?,
+                ),
+                node_id_cache,
+            }),
+            DatabaseConfig::Sqlite { file } => Ok(Self {
+                backend: Box::new(SqliteClient::new(file).await?),
+                node_id_cache,
+            }),
         }
     }
 }
 
+#[async_trait::async_trait]
 impl DatabaseBackend for DatabaseClient {
     async fn authorize_device(&self, mac: &Mac) -> Result<Option<NodeId>, Error> {
-        match self {
-            Self::Postgres(client) => client.authorize_device(mac).await,
-            Self::Sqlite(client) => client.authorize_device(mac).await,
+        if let Some(id) = self.node_id_cache.get(mac).await {
+            debug!("Node ID cache hit for '{mac}' -> '{id}'");
+            return Ok(Some(id));
         }
+
+        debug!("Node ID cache miss for '{mac}'");
+
+        if let Some(id) = self.backend.authorize_device(mac).await? {
+            self.node_id_cache.insert(*mac, id).await;
+            return Ok(Some(id));
+        }
+
+        Ok(None)
     }
 
     async fn create_notification(&self, node_id: NodeId, content: &str) -> Result<(), Error> {
-        match self {
-            Self::Postgres(client) => client.create_notification(node_id, content).await,
-            Self::Sqlite(client) => client.create_notification(node_id, content).await,
-        }
+        self.backend.create_notification(node_id, content).await
     }
 
     async fn get_settings(&self, node_id: NodeId) -> Result<Option<NodeSettings>, Error> {
-        match self {
-            Self::Postgres(client) => client.get_settings(node_id).await,
-            Self::Sqlite(client) => client.get_settings(node_id).await,
-        }
+        self.backend.get_settings(node_id).await
     }
 
     async fn post_measurements(
@@ -142,29 +169,15 @@ impl DatabaseBackend for DatabaseClient {
         wifi_ssid: &str,
         wifi_rssi: i8,
     ) -> Result<(), Error> {
-        match self {
-            Self::Postgres(client) => {
-                client
-                    .post_measurements(
-                        node, temp, hum, air_p, cpu_temp, battery, wifi_ssid, wifi_rssi,
-                    )
-                    .await
-            }
-            Self::Sqlite(client) => {
-                client
-                    .post_measurements(
-                        node, temp, hum, air_p, cpu_temp, battery, wifi_ssid, wifi_rssi,
-                    )
-                    .await
-            }
-        }
+        self.backend
+            .post_measurements(
+                node, temp, hum, air_p, cpu_temp, battery, wifi_ssid, wifi_rssi,
+            )
+            .await
     }
 
     async fn run_migrations(&self) -> Result<(), Error> {
-        match self {
-            Self::Postgres(client) => client.run_migrations().await,
-            Self::Sqlite(client) => client.run_migrations().await,
-        }
+        self.backend.run_migrations().await
     }
 
     async fn check_os_update(
@@ -172,10 +185,7 @@ impl DatabaseBackend for DatabaseClient {
         node: NodeId,
         current_ver: Version,
     ) -> Result<Option<(Version, FirmwareBlob)>, Error> {
-        match self {
-            Self::Postgres(client) => client.check_os_update(node, current_ver).await,
-            Self::Sqlite(client) => client.check_os_update(node, current_ver).await,
-        }
+        self.backend.check_os_update(node, current_ver).await
     }
 
     async fn send_os_update_stat(
@@ -184,31 +194,21 @@ impl DatabaseBackend for DatabaseClient {
         old_ver: Version,
         new_ver: Version,
     ) -> Result<UpdateStatId, Error> {
-        match self {
-            Self::Postgres(client) => client.send_os_update_stat(node_id, old_ver, new_ver).await,
-            Self::Sqlite(client) => client.send_os_update_stat(node_id, old_ver, new_ver).await,
-        }
+        self.backend
+            .send_os_update_stat(node_id, old_ver, new_ver)
+            .await
     }
 
     async fn mark_os_update_stat(&self, node_id: NodeId, success: bool) -> Result<(), Error> {
-        match self {
-            Self::Postgres(client) => client.mark_os_update_stat(node_id, success).await,
-            Self::Sqlite(client) => client.mark_os_update_stat(node_id, success).await,
-        }
+        self.backend.mark_os_update_stat(node_id, success).await
     }
 
     async fn erase(&self, options: EraseOptions) -> Result<(), Error> {
-        match self {
-            Self::Postgres(client) => client.erase(options).await,
-            Self::Sqlite(client) => client.erase(options).await,
-        }
+        self.backend.erase(options).await
     }
 
     async fn get_firmwares(&self) -> Result<Vec<FirmwareEntry>, Error> {
-        match self {
-            Self::Postgres(client) => client.get_firmwares().await,
-            Self::Sqlite(client) => client.get_firmwares().await,
-        }
+        self.backend.get_firmwares().await
     }
 
     async fn upload_firmware(
@@ -217,10 +217,9 @@ impl DatabaseBackend for DatabaseClient {
         version: Version,
         restrict_nodes: Option<Vec<NodeId>>,
     ) -> Result<(), Error> {
-        match self {
-            Self::Postgres(client) => client.upload_firmware(blob, version, restrict_nodes).await,
-            Self::Sqlite(client) => client.upload_firmware(blob, version, restrict_nodes).await,
-        }
+        self.backend
+            .upload_firmware(blob, version, restrict_nodes)
+            .await
     }
 }
 
