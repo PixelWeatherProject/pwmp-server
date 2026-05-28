@@ -39,7 +39,7 @@ pub struct FirmwareEntry {
     pub restrict: Option<Vec<NodeId>>,
 }
 
-pub trait DatabaseBackend {
+pub trait DatabaseBackend: Send + Sync {
     async fn authorize_device(&self, mac: &Mac) -> Result<Option<NodeId>, Error>;
 
     async fn create_notification(&self, node_id: NodeId, content: &str) -> Result<(), Error>;
