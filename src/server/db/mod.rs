@@ -23,7 +23,7 @@ pub type FirmwareBlob = Box<[u8]>;
 pub type UpdateStatId = i32;
 pub type SleepTime = i16;
 
-type NodeIdCache = Cache<Mac, NodeId>;
+type NodeIdCache = Cache<Mac, Option<NodeId>>;
 type NodeSettingsCache = Cache<NodeId, Option<NodeSettings>>;
 
 pub struct DatabaseClient {
@@ -106,7 +106,7 @@ impl DatabaseClient {
             .time_to_live(config.cache.auth_ttl)
             .async_eviction_listener(|k, v, c| {
                 Box::pin(async move {
-                    debug!("Auth cache evicted mapping '{k}'<=>'{v}': {c:?}");
+                    debug!("Auth cache evicted mapping '{k}'<=>'{v:?}': {c:?}");
                 })
             })
             .build();
@@ -147,18 +147,15 @@ impl DatabaseClient {
 #[async_trait::async_trait]
 impl DatabaseBackend for DatabaseClient {
     async fn authorize_device(&self, mac: &Mac) -> Result<Option<NodeId>, Error> {
-        if let Some(id) = self.node_id_cache.get(mac).await {
-            debug!("Auth cache hit for '{mac}' -> '{id}'");
-            return Ok(Some(id));
+        if let Some(maybe_id) = self.node_id_cache.get(mac).await {
+            debug!("Auth cache hit for '{mac}' -> '{maybe_id:?}'");
+            return Ok(maybe_id);
         }
 
         debug!("Auth cache miss for '{mac}'");
 
-        if let Some(id) = self.backend.authorize_device(mac).await? {
-            self.node_id_cache.insert(*mac, id).await;
-            return Ok(Some(id));
-        }
-
+        let maybe_id = self.backend.authorize_device(mac).await?;
+        self.node_id_cache.insert(*mac, maybe_id).await;
         Ok(None)
     }
 
@@ -176,7 +173,6 @@ impl DatabaseBackend for DatabaseClient {
 
         let settings = self.backend.get_settings(node_id).await?;
         self.node_settings_cache.insert(node_id, settings).await;
-
         Ok(None)
     }
 
