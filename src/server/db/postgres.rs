@@ -165,7 +165,7 @@ impl super::DatabaseBackend for PostgresClient {
         .bind(cpu_temp)
         .bind(battery)
         .bind(wifi_ssid)
-        .bind(wifi_rssi)
+        .bind(i16::from(wifi_rssi))
         .execute(&self.0)
         .await?;
 
