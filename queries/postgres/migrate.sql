@@ -172,15 +172,15 @@ $$ LANGUAGE plpgsql IMMUTABLE;
 -- Calculates the time difference between a Node's first and last entry.
 CREATE OR REPLACE FUNCTION pwmp_get_node_total_runtime(target_node INT4)
 RETURNS TABLE (
-    earliest_time TIMESTAMP,
-    latest_time TIMESTAMP,
+    earliest_time TIMESTAMP WITH TIME ZONE,
+    latest_time TIMESTAMP WITH TIME ZONE,
     diff_interval INTERVAL
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
-        MIN("when"), 
-        MAX("when"), 
+    SELECT
+        MIN("when"),
+        MAX("when"),
         age(MAX("when"), MIN("when"))
     FROM measurements
     WHERE "node" = target_node;
