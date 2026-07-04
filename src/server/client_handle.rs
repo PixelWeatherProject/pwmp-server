@@ -30,7 +30,21 @@ pub async fn handle_client(
 ) -> Result<(), Error> {
     let client = Client::new(client, peer_addr);
     let mut rate_limiter = RateLimiter::new(config.rate_limits.max_requests);
-    let mut client = client.authorize(db).await?;
+    let maybe_client = timeout(config.limits.stall_time, client.authorize(db)).await;
+
+    let mut client = match maybe_client {
+        // no timeout + auth successfull
+        Ok(Ok(client)) => client,
+
+        // error while processing request
+        Ok(Err(why)) => return Err(why),
+
+        // Timed out
+        Err(..) => {
+            error!("{peer_addr}: Stalled for too long, kicking");
+            return Err(Error::StallTimeExceeded);
+        }
+    };
 
     loop {
         let maybe_request = timeout(config.limits.stall_time, client.receive_request()).await;
@@ -233,6 +247,14 @@ async fn handle_request(
             Ok(Response::UpdatePart(buf.into_boxed_slice()))
         }
         Request::ReportFirmwareUpdate(success) => {
+            let Some(new_version) = client.update_version() else {
+                error!(
+                    "{}: Attempted to report a firmware update that was not recorded",
+                    client.id()
+                );
+                return Ok(Response::InvalidRequest);
+            };
+
             match db.mark_os_update_stat(client.id(), success).await {
                 Err(Error::InvalidRequest) => Ok(Response::InvalidRequest),
                 Err(why) => {
@@ -241,7 +263,7 @@ async fn handle_request(
                             notify,
                             client.id(),
                             db,
-                            format!("Failed to updated to {}", client.update_version().unwrap()),
+                            format!("Failed to updated to {new_version}"),
                         )
                         .await?;
                     }
@@ -254,10 +276,7 @@ async fn handle_request(
                             notify,
                             client.id(),
                             db,
-                            format!(
-                                "Successfully to updated to {}",
-                                client.update_version().unwrap()
-                            ),
+                            format!("Successfully to updated to {new_version}"),
                         )
                         .await?;
                     }
