@@ -18,15 +18,15 @@ panic = "abort"
 opt-level = 3
 
 [dependencies]
-pwmp-client = { git = "https://github.com/PixelWeatherProject/pwmp-client.git", tag = "v3.1.0" }
-time = { version = "0.3.47", default-features = false, features = ["macros"] }
+pwmp-client = { git = "https://github.com/PixelWeatherProject/pwmp-client.git", tag = "v3.1.1" }
+time = { version = "0.3.54", default-features = false, features = ["macros"] }
 sqlx = { version = "0.9.0", default-features = false, features = [
     "postgres",
     "runtime-tokio",
     "sqlite",
     "tls-rustls",
 ] }
-tokio = { version = "1.52.3", default-features = false, features = [
+tokio = { version = "1.53.1", default-features = false, features = [
     "rt-multi-thread",
     "macros",
     "socket2",
@@ -39,18 +39,18 @@ homedir = { version = "0.3.6", default-features = false }
 whoami = { version = "2.1.2", default-features = false }
 serde = { version = "1.0.228", features = ["derive"] }
 moka = { version = "0.12.15", features = ["future"] }
-reqwest = { version = "0.13.3", features = ["json"] }
-clap = { version = "4.6.1", features = ["derive"] }
-socket2 = { version = "0.6.3", features = ["all"] }
+reqwest = { version = "0.13.4", features = ["json"] }
+clap = { version = "4.6.4", features = ["derive"] }
+socket2 = { version = "0.6.5", features = ["all"] }
 tracing-subscriber = "0.3.23"
 circular-queue = "0.2.7"
-serde_json = "1.0.150"
-async-trait = "0.1.89"
-serde_with = "3.20.0"
-thiserror = "2.0.18"
+serde_json = "1.0.151"
+async-trait = "0.1.91"
+serde_with = "3.21.0"
+thiserror = "2.0.19"
 minicache = "0.1.1"
 semaphore = "0.4.0"
 tracing = "0.1.44"
-chrono = "0.4.44"
-regex = "1.12.3"
+chrono = "0.4.45"
+regex = "1.13.1"
 url = "2.5.8"
