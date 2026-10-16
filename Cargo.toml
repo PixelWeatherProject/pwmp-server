@@ -26,7 +26,7 @@ sqlx = { version = "0.9.0", default-features = false, features = [
     "sqlite",
     "tls-rustls",
 ] }
-tokio = { version = "1.53.1", default-features = false, features = [
+tokio = { version = "1.53.3", default-features = false, features = [
     "rt-multi-thread",
     "macros",
     "socket2",
@@ -44,9 +44,9 @@ clap = { version = "4.6.7", features = ["derive"] }
 socket2 = { version = "0.6.5", features = ["all"] }
 tracing-subscriber = "0.3.23"
 circular-queue = "0.2.7"
-serde_json = "1.0.151"
+serde_json = "1.0.154"
 async-trait = "0.1.92"
-serde_with = "3.23.0"
+serde_with = "3.24.0"
 thiserror = "2.0.21"
 minicache = "0.1.1"
 semaphore = "0.4.0"
