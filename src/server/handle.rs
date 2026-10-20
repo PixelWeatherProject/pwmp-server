@@ -32,7 +32,6 @@ pub async fn server_loop(
                     Ok(res) => handle_new_client(res.0, res.1, notify.clone(), Arc::clone(&shared_db), &connections, &mut rate_limiter, Arc::clone(&config)),
                     Err(why) => {
                         error!("Failed to accept connection: {why}");
-                        return;
                     }
                 }
             }
