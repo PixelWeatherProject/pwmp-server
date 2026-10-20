@@ -294,11 +294,13 @@ async fn notify_send<S: AsRef<str>>(
     // The push notification should include a node ID
     let push_message = format!("[Node #{node_id}] {}", message.as_ref()).into_boxed_str();
 
-    // The database already links messages to nodes, so we don't need to include the ID
+    // The database already links messages to nodes, so we don't need to include the ID.
+    // Database has priority, so we store the notification there first.
     db_client
         .create_notification(node_id, message.as_ref())
         .await?;
 
+    // Push notifications come second, after we permanently stored the content in the database
     notify
         .try_send(push_message)
         .map_err(|_| Error::MpscTrySend)
