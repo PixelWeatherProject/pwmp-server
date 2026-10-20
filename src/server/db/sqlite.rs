@@ -17,7 +17,7 @@ pub struct SqliteClient(Pool<Sqlite>);
 
 impl SqliteClient {
     #[tracing::instrument(name = "SqliteClient::new()", level = "debug", err, skip_all)]
-    pub async fn new(path: &PathBuf) -> Result<Self, Error> {
+    pub async fn new(path: &PathBuf, max_connections: u32) -> Result<Self, Error> {
         if !path.is_absolute() {
             return Err(Error::IllegalSqlitePath);
         }
@@ -32,7 +32,7 @@ impl SqliteClient {
             .synchronous(SqliteSynchronous::Normal);
 
         let pool = SqlitePoolOptions::new()
-            .max_connections(3)
+            .max_connections(max_connections)
             .min_connections(1)
             .connect_with(opts)
             .await?;

@@ -24,6 +24,7 @@ impl PostgresClient {
         password: &str,
         name: &str,
         ssl: bool,
+        max_connections: u32,
     ) -> Result<Self, Error> {
         let mut opts = PgConnectOptions::new()
             .host(host)
@@ -38,7 +39,7 @@ impl PostgresClient {
         }
 
         let pool = PgPoolOptions::new()
-            .max_connections(3)
+            .max_connections(max_connections)
             .min_connections(1)
             .acquire_timeout(Duration::from_secs(3))
             .idle_timeout(Duration::from_hours(1))

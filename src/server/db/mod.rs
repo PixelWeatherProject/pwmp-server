@@ -130,13 +130,22 @@ impl DatabaseClient {
                 ssl,
             } => Ok(Self {
                 backend: Box::new(
-                    PostgresClient::new(host, *port, user, password, name, *ssl).await?,
+                    PostgresClient::new(
+                        host,
+                        *port,
+                        user,
+                        password,
+                        name,
+                        *ssl,
+                        config.limits.devices,
+                    )
+                    .await?,
                 ),
                 node_id_cache,
                 node_settings_cache,
             }),
             DatabaseConfig::Sqlite { file } => Ok(Self {
-                backend: Box::new(SqliteClient::new(file).await?),
+                backend: Box::new(SqliteClient::new(file, config.limits.devices).await?),
                 node_id_cache,
                 node_settings_cache,
             }),
