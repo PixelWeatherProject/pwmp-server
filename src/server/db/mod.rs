@@ -102,7 +102,7 @@ impl DatabaseClient {
     #[tracing::instrument(name = "DatabaseClient::new()", level = "debug", err, skip_all)]
     pub async fn new(config: &Config) -> Result<Self, Error> {
         let node_id_cache = NodeIdCache::builder()
-            .max_capacity(config.cache.auth_capacity)
+            .max_capacity(config.limits.devices.into()) // one per device
             .time_to_live(config.cache.auth_ttl)
             .async_eviction_listener(|k, v, c| {
                 Box::pin(async move {
@@ -111,7 +111,7 @@ impl DatabaseClient {
             })
             .build();
         let node_settings_cache = NodeSettingsCache::builder()
-            .max_capacity(config.cache.settings_capacity)
+            .max_capacity(config.limits.devices.into()) // one per device
             .time_to_live(config.cache.settings_ttl)
             .async_eviction_listener(|k, _, c| {
                 Box::pin(async move {

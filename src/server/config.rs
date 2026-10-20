@@ -46,10 +46,7 @@ pub enum DatabaseConfig {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CacheConfig {
     pub auth_ttl: Duration,
-    pub auth_capacity: u64,
-
     pub settings_ttl: Duration,
-    pub settings_capacity: u64,
 }
 
 #[serde_as]
@@ -136,9 +133,7 @@ impl Default for CacheConfig {
     fn default() -> Self {
         Self {
             auth_ttl: Duration::from_hours(1),
-            auth_capacity: 10,
             settings_ttl: Duration::from_hours(1),
-            settings_capacity: 10,
         }
     }
 }
