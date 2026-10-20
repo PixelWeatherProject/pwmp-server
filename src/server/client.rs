@@ -3,9 +3,9 @@ use crate::{error::Error, server::db::DatabaseBackend};
 use pwmp_client::pwmp_msg::{
     Message, MsgId, mac::Mac, request::Request, response::Response, version::Version,
 };
-use std::{net::SocketAddr, vec::IntoIter};
+use std::{io::IoSlice, net::SocketAddr, vec::IntoIter};
 use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
+    io::{self, AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
 };
 use tracing::{debug, error, warn};
@@ -68,14 +68,22 @@ impl<S> Client<S> {
 
         // Get the length and store it as a proper length integer.
         let length: MsgLength = raw.len().try_into().map_err(|_| Error::MessageTooLarge)?;
+        let header = length.to_be_bytes();
 
-        // Send the length first as network endian.
-        self.stream
-            .write_all(length.to_be_bytes().as_slice())
-            .await?;
+        // Prepare the complete message for a vectored write
+        let mut slices = &mut [IoSlice::new(&header), IoSlice::new(&raw)][..];
 
-        // Send the actual message next.
-        self.stream.write_all(&raw).await?;
+        // Write the entire message to the stocket
+        while !slices.is_empty() {
+            let written = self.stream.write_vectored(slices).await?;
+
+            if written == 0 {
+                return Err(io::Error::from(io::ErrorKind::WriteZero).into());
+            }
+
+            // Skip past whatever was written, in case the kernel accepted only part of it.
+            IoSlice::advance_slices(&mut slices, written);
+        }
 
         // Flush the buffer.
         self.stream.flush().await?;
