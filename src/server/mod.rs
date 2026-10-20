@@ -16,6 +16,8 @@ use tracing::{error, info};
 pub type NotifySender = mpsc::Sender<Box<str>>;
 pub type NotifyReceiver = mpsc::Receiver<Box<str>>;
 
+const PUSH_NOTIFICATION_QUEUE_MAX_LEN: usize = 16;
+
 mod client;
 mod client_handle;
 pub mod config;
@@ -45,7 +47,7 @@ pub async fn main(config: Config) {
             exit(1);
         }
     };
-    let (notify_sender, notify_receiver) = mpsc::channel(8);
+    let (notify_sender, notify_receiver) = mpsc::channel(PUSH_NOTIFICATION_QUEUE_MAX_LEN);
     tokio::task::spawn(async move {
         notify_loop(notify_receiver, notify).await;
     });
