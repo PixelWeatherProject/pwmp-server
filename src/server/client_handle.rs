@@ -13,7 +13,7 @@ use crate::{
     },
 };
 use pwmp_client::pwmp_msg::{request::Request, response::Response};
-use std::{io::Read, net::SocketAddr, sync::Arc};
+use std::{net::SocketAddr, sync::Arc};
 use tokio::{net::TcpStream, time::timeout};
 use tracing::{debug, error, warn};
 
@@ -214,7 +214,7 @@ async fn handle_request(
                 return Ok(Response::InvalidRequest);
             }
 
-            let Some(reader) = client.update_chunk() else {
+            let Some(chunk) = client.next_update_chunk(chunk_size) else {
                 error!(
                     "{}: Requested update when there is none available",
                     client.id()
@@ -223,13 +223,9 @@ async fn handle_request(
                 return Ok(Response::InvalidRequest);
             };
 
-            let chunk_size = chunk_size.try_into()?;
-            let mut buf = vec![0; chunk_size];
-            let read = reader.read(&mut buf)?;
-            let chunk = &buf[..read];
-
             // if the entire blob has been sent
             if chunk.is_empty() {
+                // mark update as finished/pushed
                 db.send_os_update_stat(
                     client.id(),
                     client
@@ -244,7 +240,7 @@ async fn handle_request(
                 return Ok(Response::UpdateEnd);
             }
 
-            Ok(Response::UpdatePart(buf.into_boxed_slice()))
+            Ok(Response::UpdatePart(chunk))
         }
         Request::ReportFirmwareUpdate(success) => {
             let Some(new_version) = client.update_version() else {

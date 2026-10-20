@@ -3,7 +3,7 @@ use crate::{error::Error, server::db::DatabaseBackend};
 use pwmp_client::pwmp_msg::{
     Message, MsgId, mac::Mac, request::Request, response::Response, version::Version,
 };
-use std::{io::Cursor, net::SocketAddr};
+use std::{net::SocketAddr, vec::IntoIter};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
@@ -30,7 +30,7 @@ pub enum UpdateState {
     Available {
         current: Version,
         new: Version,
-        blob: Cursor<FirmwareBlob>,
+        blob: IntoIter<u8>,
     },
 }
 
@@ -249,15 +249,21 @@ impl Client<Authenticated> {
         self.state.update_state = UpdateState::Available {
             current: current_version,
             new: new_version,
-            blob: Cursor::new(blob),
+            blob: blob.into_iter(),
         };
     }
 
-    pub const fn update_chunk(&mut self) -> Option<&mut Cursor<Box<[u8]>>> {
-        match self.state.update_state {
-            UpdateState::Available { ref mut blob, .. } => Some(blob),
-            _ => None,
-        }
+    pub fn next_update_chunk(&mut self, max_size: u32) -> Option<FirmwareBlob> {
+        let UpdateState::Available { blob, .. } = &mut self.state.update_state else {
+            return None;
+        };
+
+        let part = blob
+            .by_ref()
+            .take(usize::try_from(max_size).expect("`max_size` too large to convert to usize"))
+            .collect::<FirmwareBlob>();
+
+        Some(part)
     }
 
     pub const fn current_version(&self) -> Option<Version> {
