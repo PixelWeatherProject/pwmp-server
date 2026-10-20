@@ -7,12 +7,12 @@ use super::{
 };
 use crate::{
     error::Error,
-    server::{
-        config::NotificationEventsConfig,
-        db::{DatabaseBackend, NodeId},
-    },
+    server::{config::NotificationEventsConfig, db::DatabaseBackend},
 };
-use pwmp_client::pwmp_msg::{request::Request, response::Response};
+use pwmp_client::pwmp_msg::{
+    request::Request::{self},
+    response::Response,
+};
 use std::{net::SocketAddr, sync::Arc};
 use tokio::{net::TcpStream, time::timeout};
 use tracing::{debug, error, warn};
@@ -161,7 +161,7 @@ async fn handle_request(
             if notifs_cfg.on_measurements_posted {
                 notify_send(
                     notify,
-                    client.id(),
+                    client,
                     db,
                     format!(
                         "{temperature:.02}°C, {humidity}%, {}hPa",
@@ -174,17 +174,17 @@ async fn handle_request(
             Ok(Response::Ok)
         }
         Request::SendNotification(message) => {
-            notify_send(notify, client.id(), db, message).await?;
+            notify_send(notify, client, db, message).await?;
             Ok(Response::Ok)
         }
         Request::GetSettings => {
-            let values = db.get_settings(client.id()).await?;
+            let settings = client.get_settings(db).await?;
 
-            if values.is_none() {
+            if settings.is_none() {
                 warn!("{}: Settings are undefined", client.id());
             }
 
-            Ok(Response::Settings(values))
+            Ok(Response::Settings(settings))
         }
         Request::UpdateCheck(current_ver) => {
             debug!("{}: Claims OS version {}", client.id(), current_ver);
@@ -196,7 +196,7 @@ async fn handle_request(
                 if notifs_cfg.on_update_discovered {
                     notify_send(
                         notify,
-                        client.id(),
+                        client,
                         db,
                         format!("Update {version} available, currently running {current_ver}"),
                     )
@@ -257,7 +257,7 @@ async fn handle_request(
                     if notifs_cfg.on_update_failed {
                         notify_send(
                             notify,
-                            client.id(),
+                            client,
                             db,
                             format!("Failed to updated to {new_version}"),
                         )
@@ -270,7 +270,7 @@ async fn handle_request(
                     if notifs_cfg.on_update_success {
                         notify_send(
                             notify,
-                            client.id(),
+                            client,
                             db,
                             format!("Successfully to updated to {new_version}"),
                         )
@@ -287,23 +287,32 @@ async fn handle_request(
 
 async fn notify_send<S: AsRef<str>>(
     notify: &NotifySender,
-    node_id: NodeId,
+    client: &Client<Authenticated>,
     db_client: &DatabaseClient,
     message: S,
 ) -> Result<(), Error> {
     // The push notification should include a node ID
-    let push_message = format!("[Node #{node_id}] {}", message.as_ref()).into_boxed_str();
+    let push_message = format!("[Node #{}] {}", client.id(), message.as_ref()).into_boxed_str();
 
     // The database already links messages to nodes, so we don't need to include the ID.
     // Database has priority, so we store the notification there first.
     db_client
-        .create_notification(node_id, message.as_ref())
+        .create_notification(client.id(), message.as_ref())
         .await?;
 
     // Push notifications come second, after we permanently stored the content in the database.
+
+    // If the client has notifications muted, we won't send them
+    if client.notifications_muted() {
+        return Ok(());
+    }
+
     // Since they are less important, we handle errors here and don't fail the whole request.
     if let Err(why) = notify.try_send(push_message) {
-        warn!("Node #{node_id}: failed to queue push notification: {why}");
+        warn!(
+            "Node #{}: failed to queue push notification: {why}",
+            client.id()
+        );
     }
 
     Ok(())

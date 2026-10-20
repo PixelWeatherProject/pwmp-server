@@ -1,7 +1,8 @@
 use super::db::{DatabaseClient, FirmwareBlob, MeasurementId, NodeId};
 use crate::{error::Error, server::db::DatabaseBackend};
 use pwmp_client::pwmp_msg::{
-    Message, MsgId, mac::Mac, request::Request, response::Response, version::Version,
+    Message, MsgId, mac::Mac, request::Request, response::Response, settings::NodeSettings,
+    version::Version,
 };
 use std::{io::IoSlice, net::SocketAddr, vec::IntoIter};
 use tokio::{
@@ -43,6 +44,7 @@ pub struct Authenticated {
     mac: Mac,
     last_submit: Option<MeasurementId>,
     update_state: UpdateState,
+    settings: Option<NodeSettings>,
 }
 
 impl<S> Client<S> {
@@ -222,6 +224,7 @@ impl Client<Authenticated> {
                 mac,
                 last_submit: None,
                 update_state: UpdateState::Unchecked,
+                settings: None,
             },
             peer_addr: client.peer_addr,
         }
@@ -241,6 +244,24 @@ impl Client<Authenticated> {
 
     pub fn mark_up_to_date(&mut self) {
         self.state.update_state = UpdateState::UpToDate;
+    }
+
+    pub async fn get_settings(&mut self, db: &DatabaseClient) -> Result<Option<NodeSettings>> {
+        if let Some(settings) = self.state.settings {
+            Ok(Some(settings))
+        } else {
+            let settings = db.get_settings(self.id()).await?;
+            self.state.settings = settings;
+            Ok(settings)
+        }
+    }
+
+    pub fn notifications_muted(&self) -> bool {
+        // Note: This assumes that `get_settings()` has been called at least once
+        self.state.settings.map_or_else(
+            || NodeSettings::default().mute_notifications,
+            |s| s.mute_notifications,
+        )
     }
 
     #[tracing::instrument(
