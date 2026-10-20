@@ -1,5 +1,6 @@
 use crate::error::Error;
 use reqwest::{Client, Url};
+use std::time::Duration;
 
 #[derive(Debug)]
 pub struct PushsaferClient {
@@ -9,7 +10,11 @@ pub struct PushsaferClient {
 
 impl PushsaferClient {
     pub fn new(device: &str, api_key: &str) -> Result<Self, Error> {
-        let client = reqwest::Client::new();
+        let client = reqwest::ClientBuilder::new()
+            .connect_timeout(Duration::from_secs(5))
+            .timeout(Duration::from_secs(5))
+            .build()?;
+
         let url = Url::parse_with_params(
             "https://www.pushsafer.com/api",
             &[

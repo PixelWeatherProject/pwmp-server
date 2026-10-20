@@ -1,6 +1,7 @@
 use crate::error::Error;
 use reqwest::{Client, Url};
 use serde_json::json;
+use std::time::Duration;
 
 #[derive(Debug)]
 pub struct HassNotifyClient {
@@ -11,7 +12,10 @@ pub struct HassNotifyClient {
 
 impl HassNotifyClient {
     pub fn new(device: &str, token: &str, url: &str) -> Result<Self, Error> {
-        let client = reqwest::Client::new();
+        let client = reqwest::ClientBuilder::new()
+            .connect_timeout(Duration::from_secs(5))
+            .timeout(Duration::from_secs(5))
+            .build()?;
 
         let mut url = Url::parse(url)?;
         let resource = format!("api/services/notify/{device}");
