@@ -94,8 +94,4 @@ pub enum Error {
     /// HTTP request failed.
     #[error("Failed to perform HTTP request: {0}")]
     Reqwest(#[from] reqwest::Error),
-
-    /// Failed to send message to [`notify_loop()`](crate::server::handle::notify_loop)'s MPSC buffer.
-    #[error("Timeout while sending notification to notify loop")]
-    MpscTrySend,
 }

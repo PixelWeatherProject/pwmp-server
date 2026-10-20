@@ -300,8 +300,11 @@ async fn notify_send<S: AsRef<str>>(
         .create_notification(node_id, message.as_ref())
         .await?;
 
-    // Push notifications come second, after we permanently stored the content in the database
-    notify
-        .try_send(push_message)
-        .map_err(|_| Error::MpscTrySend)
+    // Push notifications come second, after we permanently stored the content in the database.
+    // Since they are less important, we handle errors here and don't fail the whole request.
+    if let Err(why) = notify.try_send(push_message) {
+        warn!("Node #{node_id}: failed to queue push notification: {why}");
+    }
+
+    Ok(())
 }
