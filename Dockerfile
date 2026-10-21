@@ -2,7 +2,7 @@
 ### Build stage
 ###
 
-FROM rust:1.94.0-alpine AS build
+FROM rust:1.99.1-alpine AS build
 
 WORKDIR /app
 COPY . /app
@@ -12,7 +12,7 @@ RUN apk update && apk add git && cargo build --release --locked
 ## Runner
 ##
 
-FROM alpine:3.23.3 AS runner
+FROM alpine:3.24.2 AS runner
 
 LABEL org.opencontainers.image.source="https://github.com/pixelweatherproject/pwmp-server"
 
