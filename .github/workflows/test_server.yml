@@ -2,9 +2,9 @@ name: Test server
 
 on:
   push:
-    branches: [ "master" ]
+    branches: ["master", "v4"]
   pull_request:
-    branches: [ "master" ]
+    branches: ["master", "v4"]
   workflow_dispatch:
 
 env:
@@ -18,41 +18,41 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Build debug
-      run: cargo build --locked
+      - name: Build debug
+        run: cargo build --locked
 
-    - name: Create default configuration with SQLite
-      run: |
-        $BIN --config "$CONFIG"
-        yq -i '.database = {"file": strenv(DATABASE)} | .database tag = "!Sqlite"' "$CONFIG"
+      - name: Create default configuration with SQLite
+        run: |
+          $BIN --config "$CONFIG"
+          yq -i '.database = {"file": strenv(DATABASE)} | .database tag = "!Sqlite"' "$CONFIG"
 
-    - name: Run migrations
-      run: $BIN --config "$CONFIG" database init
+      - name: Run migrations
+        run: $BIN --config "$CONFIG" database init
 
-    - name: Register test device
-      run: |
-        sudo apt-get install -y sqlite3
-        sqlite3 "$DATABASE" "INSERT INTO devices (mac_address) VALUES ('$MAC');"
+      - name: Register test device
+        run: |
+          sudo apt-get install -y sqlite3
+          sqlite3 "$DATABASE" "INSERT INTO devices (mac_address) VALUES ('$MAC');"
 
-    - name: Push fake firmware
-      run: |
-        head -c 300000 /dev/urandom > firmware.bin
-        $BIN --config "$CONFIG" ota push firmware.bin 1.0.0
+      - name: Push fake firmware
+        run: |
+          head -c 300000 /dev/urandom > firmware.bin
+          $BIN --config "$CONFIG" ota push firmware.bin 1.0.0
 
-    - name: Start server
-      run: |
-        $BIN --config "$CONFIG" > server.log 2>&1 &
-        echo $! > server.pid
-        timeout 30 bash -c 'until grep -q "Server started" server.log; do sleep 1; done'
+      - name: Start server
+        run: |
+          $BIN --config "$CONFIG" > server.log 2>&1 &
+          echo $! > server.pid
+          timeout 30 bash -c 'until grep -q "Server started" server.log; do sleep 1; done'
 
-    - name: Test server
-      run: $BIN --config "$CONFIG" test 127.0.0.1 "$MAC"
+      - name: Test server
+        run: $BIN --config "$CONFIG" test 127.0.0.1 "$MAC"
 
-    - name: Server logs
-      if: always()
-      run: |
-        kill -INT "$(cat server.pid)" 2>/dev/null || true
-        timeout 10 tail --pid="$(cat server.pid)" -f /dev/null || true
-        cat server.log
+      - name: Server logs
+        if: always()
+        run: |
+          kill -INT "$(cat server.pid)" 2>/dev/null || true
+          timeout 10 tail --pid="$(cat server.pid)" -f /dev/null || true
+          cat server.log
