@@ -41,13 +41,11 @@ cache:
   auth_ttl:
     secs: 3600
     nanos: 0
-  auth_capacity: 10
 
   # Node settings cache
   settings_ttl:
     secs: 3600
     nanos: 0
-  settings_capacity: 10
 
 limits:
   # Maximum number of devices that can be connected at the same time.
