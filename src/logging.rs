@@ -1,5 +1,6 @@
 use crate::{error::Error, server::config::Config};
-use std::{fs, time::SystemTime};
+use chrono::format::{Item, StrftimeItems};
+use std::{fs, sync::LazyLock};
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::{
     fmt::{
@@ -10,13 +11,19 @@ use tracing_subscriber::{
     util::SubscriberInitExt,
 };
 
+/// Timestamp format, parsed once instead of on every log event.
+static TIME_FORMAT: LazyLock<Vec<Item<'static>>> = LazyLock::new(|| {
+    StrftimeItems::new("%d.%m.%Y/%H:%M:%S")
+        .parse_to_owned()
+        .expect("Invalid timestamp format")
+});
+
 struct DateTimeFormatter;
 
 impl FormatTime for DateTimeFormatter {
     fn format_time(&self, w: &mut Writer<'_>) -> std::fmt::Result {
-        let now = SystemTime::now();
-        let datetime: chrono::DateTime<chrono::Local> = now.into();
-        write!(w, "{}", datetime.format("%d.%m.%Y/%H:%M:%S"))
+        let datetime = chrono::Local::now();
+        write!(w, "{}", datetime.format_with_items(TIME_FORMAT.iter()))
     }
 }
 
