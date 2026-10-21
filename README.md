@@ -123,7 +123,7 @@ notification:
 |----------------------|:-------------:|:------------------:|
 | PostgreSQL           |       ✅      |     16.x, 17.x     |
 | SQLite               |       ✅      |       3.52.0       |
-| MySQL                |       ❌      |                    |
+| MySQL                |       ❌      |        N/A         |
 
 ### Chosing a database
 PostgreSQL is the recommended database for production use with a large number of devices, while SQLite is suitable for small setups or testing purposes.
