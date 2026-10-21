@@ -16,9 +16,9 @@ env:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Build debug
         run: cargo build --locked
@@ -32,9 +32,7 @@ jobs:
         run: $BIN --config "$CONFIG" database init
 
       - name: Register test device
-        run: |
-          sudo apt-get install -y sqlite3
-          sqlite3 "$DATABASE" "INSERT INTO devices (mac_address) VALUES ('$MAC');"
+        run: sqlite3 "$DATABASE" "INSERT INTO devices (mac_address) VALUES ('$MAC');"
 
       - name: Push fake firmware
         run: |
