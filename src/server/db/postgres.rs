@@ -49,20 +49,6 @@ impl PostgresClient {
 
         Ok(Self(pool))
     }
-
-    pub async fn get_last_os_update_stat_for_node(
-        &self,
-        node_id: NodeId,
-    ) -> Result<Option<UpdateStatId>, Error> {
-        let row = sqlx::query(include_str!(
-            "../../../queries/postgres/get_last_update_event.sql"
-        ))
-        .bind(node_id)
-        .fetch_optional(&self.0)
-        .await?;
-
-        row.map_or_else(|| Ok(None), |row| Ok(Some(row.get(0))))
-    }
 }
 
 #[async_trait::async_trait]
@@ -260,18 +246,18 @@ impl super::DatabaseBackend for PostgresClient {
         err
     )]
     async fn mark_os_update_stat(&self, node_id: NodeId, success: bool) -> Result<(), Error> {
-        let Some(update_stat_id) = self.get_last_os_update_stat_for_node(node_id).await? else {
-            tracing::error!("Node {node_id} did not pull the entire firmware blob");
-            return Err(Error::InvalidRequest);
-        };
-
-        sqlx::query(include_str!(
+        let result = sqlx::query(include_str!(
             "../../../queries/postgres/update_os_update_event.sql"
         ))
-        .bind(update_stat_id)
+        .bind(node_id)
         .bind(success)
         .execute(&self.0)
         .await?;
+
+        if result.rows_affected() == 0 {
+            tracing::error!("[{node_id}]: Did not pull the entire firmware blob");
+            return Err(Error::InvalidRequest);
+        }
 
         Ok(())
     }
