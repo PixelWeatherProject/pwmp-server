@@ -26,6 +26,8 @@ async fn main() -> Result<(), error::Error> {
         return Err(why);
     }
 
+    let _ = rustls::crypto::ring::default_provider().install_default();
+
     info!("PixelWeather Server v{}", env!("CARGO_PKG_VERSION"));
     debug!("Arguments: {args:?}");
 
