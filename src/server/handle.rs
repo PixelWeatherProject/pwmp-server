@@ -2,13 +2,13 @@ use super::{
     NotifyReceiver, NotifySender, config::Config, db::DatabaseClient, rate_limit::RateLimiter,
 };
 use crate::server::{client_handle::handle_client, notification_client::NotificationClient};
-use semaphore::Semaphore;
 use std::{net::SocketAddr, panic, sync::Arc};
 use tokio::{
     net::{TcpListener, TcpStream},
     runtime::Handle,
     select,
     signal::unix::Signal,
+    sync::Semaphore,
 };
 use tracing::{debug, error, info, warn};
 
@@ -22,7 +22,7 @@ pub async fn server_loop(
     mut ping_sig: Signal,
 ) {
     let shared_db = Arc::new(db);
-    let connections = Semaphore::new(config.limits.devices as _, ());
+    let connections = Arc::new(Semaphore::new(config.limits.devices as _));
     let mut rate_limiter = RateLimiter::new(config.rate_limits.max_connections);
 
     loop {
@@ -55,14 +55,14 @@ fn handle_new_client(
     peer_addr: SocketAddr,
     notify: NotifySender,
     shared_db: Arc<DatabaseClient>,
-    connections: &Semaphore<()>,
+    connections: &Arc<Semaphore>,
     rate_limiter: &mut RateLimiter,
     config: Arc<Config>,
 ) {
     debug!("New client: {peer_addr}");
 
     debug!("Incrementing connection count");
-    let Ok(semguard) = connections.try_access() else {
+    let Ok(semguard) = Arc::clone(connections).try_acquire_owned() else {
         warn!("Maximum number of connections reached, ignoring connection");
         return;
     };
