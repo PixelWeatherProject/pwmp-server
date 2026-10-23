@@ -7,7 +7,7 @@ use pwmp_client::pwmp_msg::{
     version::Version,
 };
 use sqlx::{
-    Pool, Postgres, Row,
+    Connection, Pool, Postgres, Row,
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
 };
 use std::time::Duration;
@@ -44,6 +44,17 @@ impl PostgresClient {
             .acquire_timeout(Duration::from_secs(3))
             .idle_timeout(Duration::from_hours(1))
             .max_lifetime(None)
+            .test_before_acquire(false)
+            .before_acquire(|conn, meta| {
+                Box::pin(async move {
+                    // ping only connections idle longer than 60 s
+                    if meta.idle_for.as_secs() > 60 {
+                        conn.ping().await?;
+                    }
+
+                    Ok(true)
+                })
+            })
             .connect_with(opts)
             .await?;
 

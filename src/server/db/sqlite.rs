@@ -7,7 +7,7 @@ use pwmp_client::pwmp_msg::{
     version::Version,
 };
 use sqlx::{
-    Pool, Row, Sqlite,
+    Connection, Pool, Row, Sqlite,
     sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous},
 };
 use std::{path::PathBuf, time::Duration};
@@ -34,6 +34,17 @@ impl SqliteClient {
         let pool = SqlitePoolOptions::new()
             .max_connections(max_connections)
             .min_connections(1)
+            .test_before_acquire(false)
+            .before_acquire(|conn, meta| {
+                Box::pin(async move {
+                    // ping only connections idle longer than 60 s
+                    if meta.idle_for.as_secs() > 60 {
+                        conn.ping().await?;
+                    }
+
+                    Ok(true)
+                })
+            })
             .connect_with(opts)
             .await?;
 
