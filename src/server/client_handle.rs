@@ -96,7 +96,11 @@ pub async fn handle_client(
                     return Ok(());
                 }
 
-                client.send_response(response).await?;
+                if let Err(why) =
+                    timeout(config.limits.stall_time, client.send_response(response)).await
+                {
+                    error!("{}: Timed out while sending response: {why}", client.id());
+                }
             }
             Err(why) => {
                 client.shutdown(Some(Response::InternalServerError)).await?;
