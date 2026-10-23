@@ -210,7 +210,7 @@ async fn handle_request(
             }
         }
         Request::NextUpdateChunk(chunk_size) => {
-            if chunk_size > MAX_OTA_CHUNK_SIZE {
+            if chunk_size > MAX_OTA_CHUNK_SIZE || chunk_size == 0 {
                 return Ok(Response::InvalidRequest);
             }
 
