@@ -33,7 +33,10 @@ pub enum UpdateState {
         new: Version,
         blob: IntoIter<u8>,
     },
-    Done,
+    Done {
+        current: Version,
+        new: Version,
+    },
 }
 
 #[derive(Debug)]
@@ -297,19 +300,23 @@ impl Client<Authenticated> {
     }
 
     pub fn clear_update_blob(&mut self) {
-        self.state.update_state = UpdateState::Done;
+        if let UpdateState::Available { current, new, .. } = self.state.update_state {
+            self.state.update_state = UpdateState::Done { current, new };
+        }
     }
 
     pub const fn current_version(&self) -> Option<Version> {
         match self.state.update_state {
-            UpdateState::Available { current, .. } => Some(current),
+            UpdateState::Available { current, .. } | UpdateState::Done { current, .. } => {
+                Some(current)
+            }
             _ => None,
         }
     }
 
     pub const fn update_version(&self) -> Option<Version> {
         match self.state.update_state {
-            UpdateState::Available { new, .. } => Some(new),
+            UpdateState::Available { new, .. } | UpdateState::Done { new, .. } => Some(new),
             _ => None,
         }
     }
