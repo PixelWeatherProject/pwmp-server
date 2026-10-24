@@ -25,7 +25,7 @@ panic = "abort"
 opt-level = 3
 
 [dependencies]
-pwmp-client = { git = "https://github.com/PixelWeatherProject/pwmp-client.git", tag = "v3.1.1" }
+pwmp-client = { git = "https://github.com/PixelWeatherProject/pwmp-client.git", branch = "v4" }
 reqwest = { version = "0.13.5", default-features = false, features = [
     "json",
     "charset",
