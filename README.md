@@ -114,7 +114,7 @@ notification:
     on_update_failed: true
 
     # Whether to create a notification when a node posts new measurements.
-    # This is recommended for testing purposes, as it can be quite spammy.
+    # This is recommended for testing purposes, as it can be quite spammy and negatively affects performance.
     on_measurements_posted: false
 ```
 
