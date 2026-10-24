@@ -241,6 +241,9 @@ async fn handle_request(
                 )
                 .await?;
 
+                // remove the blob from the client cache
+                client.clear_update_blob();
+
                 return Ok(Response::UpdateEnd);
             }
 

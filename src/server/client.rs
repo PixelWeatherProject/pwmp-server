@@ -33,6 +33,7 @@ pub enum UpdateState {
         new: Version,
         blob: IntoIter<u8>,
     },
+    Done,
 }
 
 #[derive(Debug)]
@@ -293,6 +294,10 @@ impl Client<Authenticated> {
             .collect::<FirmwareBlob>();
 
         Some(part)
+    }
+
+    pub fn clear_update_blob(&mut self) {
+        self.state.update_state = UpdateState::Done;
     }
 
     pub const fn current_version(&self) -> Option<Version> {
