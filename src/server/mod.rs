@@ -5,7 +5,7 @@ use crate::server::{
 };
 use config::Config;
 use socket2::SockRef;
-use std::{io, os::fd::AsFd, process::exit, sync::Arc, time::Duration};
+use std::{io, os::fd::AsFd, process::exit, sync::Arc};
 use tokio::{
     net::TcpListener,
     signal::unix::{Signal, SignalKind, signal},
@@ -85,7 +85,6 @@ pub fn set_global_socket_params<S: AsFd>(socket: &S) -> io::Result<()> {
 
     socket.set_tcp_nodelay(true)?;
     socket.set_keepalive(true)?;
-    socket.set_linger(Some(Duration::from_secs(1)))?;
 
     Ok(())
 }
