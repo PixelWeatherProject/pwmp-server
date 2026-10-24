@@ -7,6 +7,10 @@ pub enum Error {
     #[error("Failed to parse message")]
     MessageParse,
 
+    /// Failed to serialize a `Message`.
+    #[error("Failed to serialize message: {0}")]
+    MessageSerialize(#[from] pwmp_client::pwmp_msg::postcard::Error),
+
     /// Expected a message of type `Request`, got `Response` instead.
     #[error("Expected message of variant `Request`, got `Response` instead")]
     NotRequest,

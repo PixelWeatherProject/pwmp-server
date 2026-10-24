@@ -250,6 +250,16 @@ impl DatabaseBackend for DatabaseClient {
     }
 }
 
+/// Convert a temperature in decicelsius (as sent by nodes) to Celsius (as stored in the database).
+pub fn decicelsius_to_celsius(value: Temperature) -> f32 {
+    f32::from(value) / 10.0
+}
+
+/// Convert a voltage in millivolts (as sent by nodes) to volts (as stored in the database).
+pub fn millivolts_to_volts(value: BatteryVoltage) -> f32 {
+    f32::from(value) / 1000.0
+}
+
 impl EraseOptions {
     pub const fn new(content_only: bool, keep_devices: bool) -> Self {
         if content_only {

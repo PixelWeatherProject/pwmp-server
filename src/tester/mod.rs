@@ -50,16 +50,10 @@ pub fn test(host: String, port: Option<u16>, raw_mac: String) {
     info!("Performing handshake");
     if let Err(why) = qbench(
         "handshake",
-        || client.perform_handshake(mac),
+        || client.initialize_session(mac, Version::new(0, 0, 0), Some("<PWMP Test>".into())),
         &mut response_times,
     ) {
         error!("Handshake failed: {why}");
-        exit(1);
-    }
-
-    debug!("Pinging");
-    if !qbench("ping", || client.ping(), &mut response_times) {
-        error!("Ping test failed");
         exit(1);
     }
 

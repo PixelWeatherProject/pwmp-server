@@ -70,7 +70,7 @@ impl<S> Client<S> {
     #[tracing::instrument(name = "Client::send_message()", skip(self), level = "debug")]
     async fn send_message(&mut self, msg: Message) -> Result<()> {
         // Serialize the message.
-        let raw = msg.serialize();
+        let raw = msg.serialize()?;
 
         // Get the length and store it as a proper length integer.
         let length: MsgLength = raw.len().try_into().map_err(|_| Error::MessageTooLarge)?;
@@ -208,9 +208,20 @@ impl Client<Unathenticated> {
     )]
     async fn receive_handshake(&mut self) -> Result<Mac> {
         let req = self.receive_request().await?;
-        let Request::Handshake { mac } = req else {
+        let Request::Hello {
+            mac,
+            os_version,
+            os_version_ext,
+        } = req
+        else {
             return Err(Error::NotHandshake);
         };
+
+        debug!(
+            "{}: Running OS version {os_version} ({})",
+            self.peer_addr,
+            os_version_ext.as_deref().unwrap_or("-")
+        );
 
         Ok(mac)
     }

@@ -1,4 +1,7 @@
-use super::{EraseOptions, FirmwareBlob, FirmwareEntry, NodeId, SleepTime, UpdateStatId};
+use super::{
+    EraseOptions, FirmwareBlob, FirmwareEntry, NodeId, SleepTime, UpdateStatId,
+    decicelsius_to_celsius, millivolts_to_volts,
+};
 use crate::error::Error;
 use pwmp_client::pwmp_msg::{
     aliases::{AirPressure, BatteryVoltage, Humidity, Rssi, Temperature},
@@ -157,11 +160,11 @@ impl super::DatabaseBackend for PostgresClient {
             "../../../queries/postgres/post_measurements.sql"
         ))
         .bind(node)
-        .bind(temp)
+        .bind(decicelsius_to_celsius(temp))
         .bind(i16::from(hum))
         .bind(signed_air_p)
-        .bind(cpu_temp)
-        .bind(battery)
+        .bind(decicelsius_to_celsius(cpu_temp))
+        .bind(millivolts_to_volts(battery))
         .bind(wifi_ssid)
         .bind(i16::from(wifi_rssi))
         .execute(&self.0)

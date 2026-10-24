@@ -2,7 +2,7 @@ use super::{
     NotifySender,
     client::{Authenticated, Client},
     config::Config,
-    db::DatabaseClient,
+    db::{DatabaseClient, decicelsius_to_celsius},
     rate_limit::RateLimiter,
 };
 use crate::{
@@ -124,9 +124,8 @@ async fn handle_request(
     debug!("Handling {req:#?}");
 
     match req {
-        Request::Ping => Ok(Response::Pong),
-        Request::Handshake { .. } => {
-            warn!("Received another handshake message");
+        Request::Hello { .. } => {
+            error!("Received another handshake message");
             Ok(Response::InvalidRequest)
         }
         Request::PostMeasurements {
@@ -146,8 +145,10 @@ async fn handle_request(
                 return Ok(Response::InvalidRequest);
             }
 
+            let celsius = decicelsius_to_celsius(temperature);
+
             debug!(
-                "{}: {temperature:.02}°C, {humidity}%, {air_pressure:?}hPa",
+                "{}: {celsius:.02}°C, {humidity}%, {air_pressure:?}hPa",
                 client.id()
             );
             db.post_measurements(
@@ -168,7 +169,7 @@ async fn handle_request(
                     client,
                     db,
                     format!(
-                        "{temperature:.02}°C, {humidity}%, {}hPa",
+                        "{celsius:.02}°C, {humidity}%, {}hPa",
                         air_pressure.map_or_else(|| "-".to_string(), |val| val.to_string())
                     ),
                 )
@@ -176,6 +177,13 @@ async fn handle_request(
             }
 
             Ok(Response::Ok)
+        }
+        Request::PostDiagnosticsArtifact { kind, .. } => {
+            warn!(
+                "{}: Diagnostic artifacts are not supported yet (got \"{kind}\")",
+                client.id()
+            );
+            Ok(Response::InvalidRequest)
         }
         Request::SendNotification(message) => {
             notify_send(notify, client, db, message).await?;
