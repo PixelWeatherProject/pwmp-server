@@ -12,20 +12,14 @@ CREATE TABLE
         node INTEGER NOT NULL REFERENCES devices (id),
         "when" TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         -- decicelsius
-        temperature INTEGER NOT NULL CHECK (
-            temperature > -1000
-            AND temperature < 1000
-        ),
+        temperature INTEGER NOT NULL CHECK (temperature BETWEEN -200 AND 500),
         humidity INTEGER NOT NULL CHECK (
             humidity >= 0
             AND humidity <= 100
         ),
         air_pressure INTEGER DEFAULT NULL,
         -- decicelsius
-        cpu_temp INTEGER NOT NULL CHECK (
-            cpu_temp > -1000
-            AND cpu_temp < 1000
-        ),
+        cpu_temp INTEGER NOT NULL CHECK (cpu_temp BETWEEN -100 AND 800),
         -- millivolts
         battery INTEGER NOT NULL CHECK (
             battery > 0
