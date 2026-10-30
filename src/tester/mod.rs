@@ -134,6 +134,8 @@ pub fn test(host: String, port: Option<u16>, raw_mac: String) {
         exit(1);
     }
 
+    let _ = client.close_session(false);
+
     let elapsed = start.elapsed();
     info!("Test passed in {elapsed:?}!");
 
