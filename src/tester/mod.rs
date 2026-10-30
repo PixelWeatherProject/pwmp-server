@@ -66,6 +66,15 @@ pub fn test(host: String, port: Option<u16>, raw_mac: String) {
         error!("Failed to get settings: {why}");
     }
 
+    debug!("Requesting network time");
+    if let Err(why) = qbench(
+        "get unix epoch",
+        || client.get_date_time(true),
+        &mut response_times,
+    ) {
+        error!("Failed to get network time: {why}");
+    }
+
     debug!("Testing measurement posting");
     if let Err(why) = qbench(
         "post 1",

@@ -1568,7 +1568,7 @@ dependencies = [
 [[package]]
 name = "pwmp-client"
 version = "4.0.0"
-source = "git+https://github.com/PixelWeatherProject/pwmp-client.git?branch=v4#ea19dcbbfb222747cd567c5cf5f35f3107281cc3"
+source = "git+https://github.com/PixelWeatherProject/pwmp-client.git?branch=v4#44f5204c3d262592a62fb34b0b05e0a1bf065017"
 dependencies = [
  "libc",
  "pwmp-msg",
