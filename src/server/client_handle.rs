@@ -23,7 +23,7 @@ const MAX_OTA_CHUNK_SIZE: u32 = 4 * 1024 * 1024; // 4 MiB
 /// Maximum allowed length of a diagnostic artifact's tag
 const MAX_DIAGART_TAG_SIZE: usize = 32;
 
-/// Maximum allowed length of a diagnostic artifact's tag
+/// Maximum allowed size of a diagnostic artifact's content
 const MAX_DIAGART_CONTENT_SIZE: usize = 4 * 1024 * 1024; // 4 MiB
 
 #[allow(clippy::needless_pass_by_value, clippy::cognitive_complexity)]
