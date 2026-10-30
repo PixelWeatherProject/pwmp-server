@@ -19,12 +19,6 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
-    /// Service management
-    Service {
-        #[command(subcommand)]
-        command: ServiceCommand,
-    },
-
     /// Database management
     Database {
         #[command(subcommand)]
@@ -45,33 +39,6 @@ pub enum Command {
         /// Alternative port to use
         port: Option<u16>,
     },
-}
-
-#[derive(Debug, Subcommand, Clone)]
-pub enum ServiceCommand {
-    /// Start the service
-    Start,
-
-    /// Stop the service
-    Stop,
-
-    /// Enable
-    Enable,
-
-    /// Disable
-    Disable,
-
-    /// Install as service
-    Install,
-
-    /// Uninstall service
-    Uninstall,
-
-    /// Check the status of the service
-    Status,
-
-    /// Reinstall service
-    Reinstall,
 }
 
 #[derive(Debug, Subcommand, Clone)]

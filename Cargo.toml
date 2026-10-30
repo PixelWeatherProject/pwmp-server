@@ -55,7 +55,6 @@ sqlx = { version = "0.9.0", default-features = false, features = [
 ] }
 tracing = { version = "0.1.44", features = ["max_level_debug"] }
 homedir = { version = "0.3.6", default-features = false }
-whoami = { version = "2.1.3", default-features = false }
 serde = { version = "1.0.229", features = ["derive"] }
 moka = { version = "0.12.16", features = ["future"] }
 clap = { version = "4.6.7", features = ["derive"] }

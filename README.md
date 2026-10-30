@@ -130,36 +130,6 @@ PostgreSQL is the recommended database for production use with a large number of
 SQLite will perform a lot faster (min/max/avg response times <1ms) but offers less type safety and may result in slightly higher CPU and RAM usage due to not supporting certain features that have to be emulated with multiple queries or additional logic.
 PostgreSQL causes higher latency (min/max/avg response times >10ms) but has higher priority when it comes to features.
 
-## Using as a service
-The CLI has a `service` subcommand, which allows managing a background service.
-
-```
-$ pwmp-server service help
-Service management
-
-Usage: pwmp-server service <COMMAND>
-
-Commands:
-  start      Start the service
-  stop       Stop the service
-  enable     Enable
-  disable    Disable
-  install    Install as service
-  uninstall  Uninstall service
-  check      Check if service is installed
-  reinstall  Reinstall service
-```
-
-### Service manager support table
-|                   **Service manager**                   |  **Supported** |
-|:-------------------------------------------------------:|:--------------:|
-|             [SystemD](https://systemd.io/)              |       ✅       |
-|        [OpenRC](https://github.com/OpenRC/openrc)       |       ✅       |
-|  [Homebrew Services](https://github.com/Homebrew/brew)  |       ❌       |
-|                        Windows                          |       ❌       |
-
-Service management on Windows is **not** and **will not** be supported.
-
 ## Signal handling
 The server can be peacefully terminated using `SIGINT`:
 ```sh

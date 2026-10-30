@@ -1609,7 +1609,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "url",
- "whoami",
 ]
 
 [[package]]

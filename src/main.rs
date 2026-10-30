@@ -10,7 +10,6 @@ mod error;
 mod logging;
 mod otautil;
 mod server;
-mod svcmgr;
 mod tester;
 
 #[tokio::main]
@@ -38,7 +37,6 @@ async fn main() -> Result<(), error::Error> {
     }
 
     match args.command {
-        Some(Command::Service { command }) => svcmgr::main(command),
         Some(Command::Database { command }) => dbmgr::main(command, &config).await,
         Some(Command::Test { host, mac, port }) => tester::test(host, port, mac),
         Some(Command::Ota { command }) => otautil::run(command, &config).await?,

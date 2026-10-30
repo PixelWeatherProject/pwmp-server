@@ -62,17 +62,9 @@ pub enum Error {
     #[error("Slice length does not match the expected array length: {0}")]
     ArrayFromSliceSizeMismatch(#[from] TryFromSliceError),
 
-    /// A subprocess has exited with an error.
-    #[error("A process has returned a non-zero exit code")]
-    SubprocessExit,
-
     /// Failed to parse a UTF-8 string.
     #[error("Failed to parse a UTF-8 string")]
     StringFromUtf8Bytes(#[from] FromUtf8Error),
-
-    /// Failed to get current username.
-    #[error("Failed to get current username: {0}")]
-    Whoami(#[from] whoami::Error),
 
     /// Configuration load/store error.
     #[error("confy: {0}")]
