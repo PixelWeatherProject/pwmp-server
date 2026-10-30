@@ -4,6 +4,8 @@ DROP TABLE IF EXISTS settings;
 
 DROP TABLE IF EXISTS notifications;
 
+DROP TABLE IF EXISTS diagnostic_artifacts;
+
 DROP TABLE IF EXISTS measurements;
 
 DROP TABLE IF EXISTS firmware_stats;

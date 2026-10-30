@@ -159,6 +159,30 @@ impl super::DatabaseBackend for SqliteClient {
     }
 
     #[tracing::instrument(
+        name = "SqliteClient::store_diagnostic_artifact()",
+        level = "debug",
+        skip(self, content),
+        err
+    )]
+    async fn store_diagnostic_artifact(
+        &self,
+        node: NodeId,
+        tag: &str,
+        content: &str,
+    ) -> Result<(), Error> {
+        sqlx::query(include_str!(
+            "../../../queries/sqlite/push_diagnostic_artifact.sql"
+        ))
+        .bind(node)
+        .bind(tag)
+        .bind(content)
+        .execute(&self.0)
+        .await?;
+
+        Ok(())
+    }
+
+    #[tracing::instrument(
         name = "SqliteClient::run_migrations()",
         level = "debug",
         skip(self),

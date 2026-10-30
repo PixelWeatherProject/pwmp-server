@@ -69,6 +69,13 @@ pub trait DatabaseBackend: Send + Sync {
         wifi_rssi: Rssi,
     ) -> Result<(), Error>;
 
+    async fn store_diagnostic_artifact(
+        &self,
+        node: NodeId,
+        tag: &str,
+        content: &str,
+    ) -> Result<(), Error>;
+
     async fn run_migrations(&self) -> Result<(), Error>;
 
     async fn check_os_update(
@@ -200,6 +207,17 @@ impl DatabaseBackend for DatabaseClient {
             .post_measurements(
                 node, temp, hum, air_p, cpu_temp, battery, wifi_ssid, wifi_rssi,
             )
+            .await
+    }
+
+    async fn store_diagnostic_artifact(
+        &self,
+        node: NodeId,
+        tag: &str,
+        content: &str,
+    ) -> Result<(), Error> {
+        self.backend
+            .store_diagnostic_artifact(node, tag, content)
             .await
     }
 

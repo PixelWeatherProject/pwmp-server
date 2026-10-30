@@ -56,6 +56,15 @@ CREATE TABLE
     );
 
 CREATE TABLE
+    diagnostic_artifacts (
+        id SERIAL PRIMARY KEY,
+        node INT4 NOT NULL REFERENCES devices (id),
+        "when" TIMESTAMP NOT NULL DEFAULT NOW (),
+        tag VARCHAR(32) NOT NULL,
+        content TEXT NOT NULL
+    );
+
+CREATE TABLE
     firmwares (
         id SERIAL PRIMARY KEY,
         version_major SMALLINT NOT NULL CHECK (version_major >= 0),

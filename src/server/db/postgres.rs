@@ -174,6 +174,30 @@ impl super::DatabaseBackend for PostgresClient {
     }
 
     #[tracing::instrument(
+        name = "PostgresClient::store_diagnostic_artifact()",
+        level = "debug",
+        skip(self, content),
+        err
+    )]
+    async fn store_diagnostic_artifact(
+        &self,
+        node: NodeId,
+        tag: &str,
+        content: &str,
+    ) -> Result<(), Error> {
+        sqlx::query(include_str!(
+            "../../../queries/postgres/push_diagnostic_artifact.sql"
+        ))
+        .bind(node)
+        .bind(tag)
+        .bind(content)
+        .execute(&self.0)
+        .await?;
+
+        Ok(())
+    }
+
+    #[tracing::instrument(
         name = "PostgresClient::run_migrations()",
         level = "debug",
         skip(self),

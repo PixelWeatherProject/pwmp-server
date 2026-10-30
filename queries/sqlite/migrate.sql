@@ -54,6 +54,15 @@ CREATE TABLE
     ) STRICT;
 
 CREATE TABLE
+    diagnostic_artifacts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        node INTEGER NOT NULL REFERENCES devices (id),
+        "when" TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        tag TEXT NOT NULL,
+        content TEXT NOT NULL
+    ) STRICT;
+
+CREATE TABLE
     firmwares (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         version_major INTEGER NOT NULL CHECK (version_major >= 0),

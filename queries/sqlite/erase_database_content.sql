@@ -6,6 +6,8 @@ DELETE FROM settings;
 
 DELETE FROM notifications;
 
+DELETE FROM diagnostic_artifacts;
+
 DELETE FROM firmware_stats;
 
 DELETE FROM firmwares;
@@ -19,6 +21,7 @@ WHERE
         'measurements',
         'settings',
         'notifications',
+        'diagnostic_artifacts',
         'firmware_stats',
         'firmwares',
         'devices'

@@ -20,6 +20,12 @@ use tracing::{debug, error, warn};
 /// Maximum OTA chunk size a client can request.
 const MAX_OTA_CHUNK_SIZE: u32 = 4 * 1024 * 1024; // 4 MiB
 
+/// Maximum allowed length of a diagnostic artifact's tag
+const MAX_DIAGART_TAG_SIZE: usize = 32;
+
+/// Maximum allowed length of a diagnostic artifact's tag
+const MAX_DIAGART_CONTENT_SIZE: usize = 4 * 1024 * 1024; // 4 MiB
+
 #[allow(clippy::needless_pass_by_value, clippy::cognitive_complexity)]
 pub async fn handle_client(
     client: TcpStream,
@@ -178,12 +184,37 @@ async fn handle_request(
 
             Ok(Response::Ok)
         }
-        Request::PostDiagnosticsArtifact { kind, .. } => {
-            warn!(
-                "{}: Diagnostic artifacts are not supported yet (got \"{kind}\")",
-                client.id()
-            );
-            Ok(Response::InvalidRequest)
+        Request::PostDiagnosticsArtifact { kind, content } => {
+            if kind.len() > MAX_DIAGART_TAG_SIZE {
+                error!(
+                    "{}: Attempted to submit a diag artifact with tag longer than {MAX_DIAGART_TAG_SIZE} chars",
+                    client.id()
+                );
+                return Ok(Response::InvalidRequest);
+            }
+
+            if content.len() > MAX_DIAGART_CONTENT_SIZE {
+                error!(
+                    "{}: Attempted to submit a diag artifact larger than {MAX_DIAGART_CONTENT_SIZE} bytes",
+                    client.id()
+                );
+                return Ok(Response::InvalidRequest);
+            }
+
+            // for now we'll only support UTF-8 encoded strings
+            // but we'll expand support to raw blobs
+
+            let Ok(content_str) = std::str::from_utf8(&content) else {
+                error!(
+                    "{}: Diagnostic artifact was not an UTF-8 string",
+                    client.id()
+                );
+                return Ok(Response::InvalidRequest);
+            };
+
+            db.store_diagnostic_artifact(client.id(), &kind, content_str)
+                .await?;
+            Ok(Response::Ok)
         }
         Request::SendNotification(message) => {
             notify_send(notify, client, db, message).await?;
