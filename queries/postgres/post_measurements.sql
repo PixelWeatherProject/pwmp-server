@@ -6,6 +6,10 @@ INSERT INTO measurements(
         "cpu_temp",
         "battery",
         "wifi_ssid",
-        "wifi_rssi"
+        "wifi_rssi",
+        "os_version_major",
+        "os_version_middle",
+        "os_version_minor",
+        "os_version_ext"
     )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);

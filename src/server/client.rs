@@ -46,6 +46,8 @@ pub struct Unathenticated;
 pub struct Authenticated {
     id: NodeId,
     mac: Mac,
+    os_version: Version,
+    os_version_ext: Option<Box<str>>,
     last_submit: Option<MeasurementId>,
     update_state: UpdateState,
     settings: Option<NodeSettings>,
@@ -171,13 +173,14 @@ impl Client<Unathenticated> {
     #[allow(clippy::cognitive_complexity)]
     pub async fn authorize(mut self, db: &DatabaseClient) -> Result<Client<Authenticated>> {
         debug!("{}: Awaiting greeting", self.peer_addr);
-        let mac = self.receive_handshake().await?;
+        let (mac, os_version, os_version_ext) = self.receive_handshake().await?;
 
         debug!("{}: Is {}?", self.peer_addr, mac);
 
         match db.authorize_device(&mac).await {
             Ok(Some(id)) => {
-                let mut authorized_client = Client::<Authenticated>::new(self, id, mac);
+                let mut authorized_client =
+                    Client::<Authenticated>::new(self, id, mac, os_version, os_version_ext);
                 debug!(
                     "Device {} authorized as node #{id}",
                     authorized_client.mac()
@@ -206,7 +209,7 @@ impl Client<Unathenticated> {
         err,
         ret
     )]
-    async fn receive_handshake(&mut self) -> Result<Mac> {
+    async fn receive_handshake(&mut self) -> Result<(Mac, Version, Option<Box<str>>)> {
         let req = self.receive_request().await?;
         let Request::Hello {
             mac,
@@ -223,12 +226,18 @@ impl Client<Unathenticated> {
             os_version_ext.as_deref().unwrap_or("-")
         );
 
-        Ok(mac)
+        Ok((mac, os_version, os_version_ext))
     }
 }
 
 impl Client<Authenticated> {
-    fn new(client: Client<Unathenticated>, id: NodeId, mac: Mac) -> Self {
+    fn new(
+        client: Client<Unathenticated>,
+        id: NodeId,
+        mac: Mac,
+        os_version: Version,
+        os_version_ext: Option<Box<str>>,
+    ) -> Self {
         Self {
             stream: client.stream,
             buf: client.buf,
@@ -237,6 +246,8 @@ impl Client<Authenticated> {
             state: Authenticated {
                 id,
                 mac,
+                os_version,
+                os_version_ext,
                 last_submit: None,
                 update_state: UpdateState::Unchecked,
                 settings: None,
@@ -251,6 +262,14 @@ impl Client<Authenticated> {
 
     pub const fn mac(&self) -> &Mac {
         &self.state.mac
+    }
+
+    pub const fn os_version(&self) -> Version {
+        self.state.os_version
+    }
+
+    pub fn os_version_ext(&self) -> Option<&str> {
+        self.state.os_version_ext.as_deref()
     }
 
     pub const fn last_submit(&self) -> Option<MeasurementId> {

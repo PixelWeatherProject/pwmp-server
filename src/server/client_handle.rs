@@ -166,6 +166,8 @@ async fn handle_request(
                 battery,
                 &wifi_ssid,
                 wifi_rssi,
+                client.os_version(),
+                client.os_version_ext(),
             )
             .await?;
 

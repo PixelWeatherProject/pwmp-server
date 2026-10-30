@@ -140,7 +140,12 @@ impl super::DatabaseBackend for SqliteClient {
         battery: BatteryVoltage,
         wifi_ssid: &str,
         wifi_rssi: Rssi,
+        os_version: Version,
+        os_version_ext: Option<&str>,
     ) -> Result<(), Error> {
+        let (os_version_major, os_version_middle, os_version_minor) =
+            os_version.to_signed_triple();
+
         sqlx::query(include_str!(
             "../../../queries/sqlite/post_measurements.sql"
         ))
@@ -152,6 +157,10 @@ impl super::DatabaseBackend for SqliteClient {
         .bind(millivolts_to_volts(battery))
         .bind(wifi_ssid)
         .bind(wifi_rssi)
+        .bind(os_version_major)
+        .bind(os_version_middle)
+        .bind(os_version_minor)
+        .bind(os_version_ext)
         .execute(&self.0)
         .await?;
 

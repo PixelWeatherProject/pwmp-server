@@ -67,6 +67,8 @@ pub trait DatabaseBackend: Send + Sync {
         battery: BatteryVoltage,
         wifi_ssid: &str,
         wifi_rssi: Rssi,
+        os_version: Version,
+        os_version_ext: Option<&str>,
     ) -> Result<(), Error>;
 
     async fn store_diagnostic_artifact(
@@ -202,10 +204,21 @@ impl DatabaseBackend for DatabaseClient {
         battery: BatteryVoltage,
         wifi_ssid: &str,
         wifi_rssi: i8,
+        os_version: Version,
+        os_version_ext: Option<&str>,
     ) -> Result<(), Error> {
         self.backend
             .post_measurements(
-                node, temp, hum, air_p, cpu_temp, battery, wifi_ssid, wifi_rssi,
+                node,
+                temp,
+                hum,
+                air_p,
+                cpu_temp,
+                battery,
+                wifi_ssid,
+                wifi_rssi,
+                os_version,
+                os_version_ext,
             )
             .await
     }

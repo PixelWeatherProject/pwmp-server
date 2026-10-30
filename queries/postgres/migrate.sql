@@ -32,7 +32,11 @@ CREATE TABLE
             AND battery < 5.00
         ),
         wifi_ssid VARCHAR(32) NOT NULL,
-        wifi_rssi INT2 NOT NULL
+        wifi_rssi INT2 NOT NULL,
+        os_version_major SMALLINT NOT NULL CHECK (os_version_major >= 0),
+        os_version_middle SMALLINT NOT NULL CHECK (os_version_middle >= 0),
+        os_version_minor SMALLINT NOT NULL CHECK (os_version_minor >= 0),
+        os_version_ext TEXT DEFAULT NULL
     );
 
 CREATE TABLE settings (

@@ -150,11 +150,15 @@ impl super::DatabaseBackend for PostgresClient {
         battery: BatteryVoltage,
         wifi_ssid: &str,
         wifi_rssi: Rssi,
+        os_version: Version,
+        os_version_ext: Option<&str>,
     ) -> Result<(), Error> {
         let signed_air_p: Option<i16> = match air_p {
             Some(value) => Some(value.try_into()?),
             None => None,
         };
+        let (os_version_major, os_version_middle, os_version_minor) =
+            os_version.to_signed_triple();
 
         sqlx::query(include_str!(
             "../../../queries/postgres/post_measurements.sql"
@@ -167,6 +171,10 @@ impl super::DatabaseBackend for PostgresClient {
         .bind(millivolts_to_volts(battery))
         .bind(wifi_ssid)
         .bind(i16::from(wifi_rssi))
+        .bind(os_version_major)
+        .bind(os_version_middle)
+        .bind(os_version_minor)
+        .bind(os_version_ext)
         .execute(&self.0)
         .await?;
 
