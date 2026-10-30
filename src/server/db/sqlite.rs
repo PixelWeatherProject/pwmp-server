@@ -1,6 +1,5 @@
 use super::{
     EraseOptions, FirmwareBlob, FirmwareEntry, NodeId, SleepTime, UpdateStatId,
-    decicelsius_to_celsius, millivolts_to_volts,
 };
 use crate::error::Error;
 use pwmp_client::pwmp_msg::{
@@ -150,11 +149,11 @@ impl super::DatabaseBackend for SqliteClient {
             "../../../queries/sqlite/post_measurements.sql"
         ))
         .bind(node)
-        .bind(decicelsius_to_celsius(temp))
+        .bind(temp)
         .bind(hum)
         .bind(air_p)
-        .bind(decicelsius_to_celsius(cpu_temp))
-        .bind(millivolts_to_volts(battery))
+        .bind(cpu_temp)
+        .bind(battery)
         .bind(wifi_ssid)
         .bind(wifi_rssi)
         .bind(os_version_major)

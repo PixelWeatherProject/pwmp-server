@@ -1,6 +1,5 @@
 use super::{
     EraseOptions, FirmwareBlob, FirmwareEntry, NodeId, SleepTime, UpdateStatId,
-    decicelsius_to_celsius, millivolts_to_volts,
 };
 use crate::error::Error;
 use pwmp_client::pwmp_msg::{
@@ -157,6 +156,7 @@ impl super::DatabaseBackend for PostgresClient {
             Some(value) => Some(value.try_into()?),
             None => None,
         };
+        let signed_battery: i16 = battery.try_into()?;
         let (os_version_major, os_version_middle, os_version_minor) =
             os_version.to_signed_triple();
 
@@ -164,11 +164,11 @@ impl super::DatabaseBackend for PostgresClient {
             "../../../queries/postgres/post_measurements.sql"
         ))
         .bind(node)
-        .bind(decicelsius_to_celsius(temp))
+        .bind(temp)
         .bind(i16::from(hum))
         .bind(signed_air_p)
-        .bind(decicelsius_to_celsius(cpu_temp))
-        .bind(millivolts_to_volts(battery))
+        .bind(cpu_temp)
+        .bind(signed_battery)
         .bind(wifi_ssid)
         .bind(i16::from(wifi_rssi))
         .bind(os_version_major)

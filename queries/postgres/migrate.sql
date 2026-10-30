@@ -14,22 +14,25 @@ CREATE TABLE
         id SERIAL PRIMARY KEY,
         node INT4 NOT NULL REFERENCES devices (id),
         "when" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW (),
-        temperature REAL NOT NULL CHECK (
-            temperature > -100.00
-            AND temperature < 100.00
+        -- decicelsius
+        temperature SMALLINT NOT NULL CHECK (
+            temperature > -1000
+            AND temperature < 1000
         ),
         humidity SMALLINT NOT NULL CHECK (
             humidity >= 0
             AND humidity <= 100
         ),
         air_pressure SMALLINT DEFAULT NULL,
-        cpu_temp REAL NOT NULL CHECK (
-            temperature > -100.00
-            AND temperature < 100.00
+        -- decicelsius
+        cpu_temp SMALLINT NOT NULL CHECK (
+            cpu_temp > -1000
+            AND cpu_temp < 1000
         ),
-        battery REAL NOT NULL CHECK (
+        -- millivolts
+        battery SMALLINT NOT NULL CHECK (
             battery > 0
-            AND battery < 5.00
+            AND battery < 5000
         ),
         wifi_ssid VARCHAR(32) NOT NULL,
         wifi_rssi INT2 NOT NULL,

@@ -11,22 +11,25 @@ CREATE TABLE
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         node INTEGER NOT NULL REFERENCES devices (id),
         "when" TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        temperature REAL NOT NULL CHECK (
-            temperature > -100.00
-            AND temperature < 100.00
+        -- decicelsius
+        temperature INTEGER NOT NULL CHECK (
+            temperature > -1000
+            AND temperature < 1000
         ),
         humidity INTEGER NOT NULL CHECK (
             humidity >= 0
             AND humidity <= 100
         ),
         air_pressure INTEGER DEFAULT NULL,
-        cpu_temp REAL NOT NULL CHECK (
-            temperature > -100.00
-            AND temperature < 100.00
+        -- decicelsius
+        cpu_temp INTEGER NOT NULL CHECK (
+            cpu_temp > -1000
+            AND cpu_temp < 1000
         ),
-        battery REAL NOT NULL CHECK (
+        -- millivolts
+        battery INTEGER NOT NULL CHECK (
             battery > 0
-            AND battery < 5.00
+            AND battery < 5000
         ),
         wifi_ssid TEXT NOT NULL,
         wifi_rssi INTEGER NOT NULL,
