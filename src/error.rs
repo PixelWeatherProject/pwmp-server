@@ -1,4 +1,7 @@
-use std::{array::TryFromSliceError, io, num::TryFromIntError, string::FromUtf8Error};
+use std::{
+    array::TryFromSliceError, io, num::TryFromIntError, string::FromUtf8Error,
+    time::SystemTimeError,
+};
 use tracing::subscriber::SetGlobalDefaultError;
 
 #[derive(Debug, thiserror::Error)]
@@ -90,4 +93,8 @@ pub enum Error {
     /// HTTP request failed.
     #[error("Failed to perform HTTP request: {0}")]
     Reqwest(#[from] reqwest::Error),
+
+    /// Failed to get UNIX epoch from system time.
+    #[error("Failed to get UNIX epoch from system time: {0}")]
+    EpochCalc(#[from] SystemTimeError),
 }

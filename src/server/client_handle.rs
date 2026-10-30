@@ -13,7 +13,11 @@ use pwmp_client::pwmp_msg::{
     request::Request::{self},
     response::Response,
 };
-use std::{net::SocketAddr, sync::Arc};
+use std::{
+    net::SocketAddr,
+    sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 use tokio::{net::TcpStream, time::timeout};
 use tracing::{debug, error, warn};
 
@@ -230,6 +234,11 @@ async fn handle_request(
             }
 
             Ok(Response::Settings(settings))
+        }
+        Request::GetDateTime => {
+            let epoch = SystemTime::now().duration_since(UNIX_EPOCH)?;
+            let epoch_seconds = epoch.as_secs();
+            Ok(Response::EpochTime(epoch_seconds))
         }
         Request::UpdateCheck(current_ver) => {
             debug!("{}: Claims OS version {}", client.id(), current_ver);
