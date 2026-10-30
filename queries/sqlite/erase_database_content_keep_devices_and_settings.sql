@@ -1,5 +1,3 @@
-DELETE FROM statistics;
-
 DELETE FROM measurements;
 
 DELETE FROM notifications;
@@ -13,7 +11,6 @@ DELETE FROM firmwares;
 DELETE FROM sqlite_sequence
 WHERE
     name IN (
-        'statistics',
         'measurements',
         'notifications',
         'diagnostic_artifacts',

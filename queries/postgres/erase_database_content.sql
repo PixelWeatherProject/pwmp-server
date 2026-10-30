@@ -1,5 +1,4 @@
-TRUNCATE statistics,
-measurements,
+TRUNCATE measurements,
 settings,
 notifications,
 diagnostic_artifacts,

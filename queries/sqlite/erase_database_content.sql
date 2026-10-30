@@ -1,5 +1,3 @@
-DELETE FROM statistics;
-
 DELETE FROM measurements;
 
 DELETE FROM settings;
@@ -17,7 +15,6 @@ DELETE FROM devices;
 DELETE FROM sqlite_sequence
 WHERE
     name IN (
-        'statistics',
         'measurements',
         'settings',
         'notifications',
