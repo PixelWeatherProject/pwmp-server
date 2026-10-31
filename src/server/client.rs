@@ -11,7 +11,7 @@ use tokio::{
 };
 use tracing::{debug, error, warn};
 
-const RCV_BUFFER_SIZE: usize = 1024;
+const RCV_BUFFER_SIZE: usize = 4096;
 type Result<T> = ::std::result::Result<T, Error>;
 type MsgLength = u32;
 
