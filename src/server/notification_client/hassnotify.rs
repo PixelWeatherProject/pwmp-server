@@ -39,7 +39,6 @@ impl HassNotifyClient {
         self.client
             .post(self.url.clone())
             .header("Authorization", self.token.clone())
-            .header("Content-Type", "application/json")
             .json(&json!({
                 "title": "PixelWeather",
                 "message": content,
