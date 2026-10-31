@@ -1,5 +1,5 @@
 use crate::error::Error;
-use reqwest::{Client, Url};
+use reqwest::{Client, Url, header::HeaderValue};
 use serde_json::json;
 use std::time::Duration;
 
@@ -7,7 +7,7 @@ use std::time::Duration;
 pub struct HassNotifyClient {
     client: Client,
     url: Url,
-    token: Box<str>,
+    token: HeaderValue,
 }
 
 impl HassNotifyClient {
@@ -21,11 +21,11 @@ impl HassNotifyClient {
         let resource = format!("api/services/notify/{device}");
         url.set_path(&resource);
 
-        Ok(Self {
-            client,
-            url,
-            token: token.into(),
-        })
+        let mut token =
+            HeaderValue::from_str(&format!("Bearer {token}")).expect("Invalid header value");
+        token.set_sensitive(true);
+
+        Ok(Self { client, url, token })
     }
 
     #[tracing::instrument(
@@ -38,7 +38,7 @@ impl HassNotifyClient {
     pub async fn send_notification(&self, content: &str) -> Result<(), Error> {
         self.client
             .post(self.url.clone())
-            .header("Authorization", format!("Bearer {}", self.token))
+            .header("Authorization", self.token.clone())
             .header("Content-Type", "application/json")
             .json(&json!({
                 "title": "PixelWeather",
