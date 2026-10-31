@@ -1,6 +1,6 @@
 use crate::error::Error;
 use reqwest::{Client, Url, header::HeaderValue};
-use serde_json::json;
+use serde::Serialize;
 use std::time::Duration;
 
 #[derive(Debug)]
@@ -8,6 +8,12 @@ pub struct HassNotifyClient {
     client: Client,
     url: Url,
     token: HeaderValue,
+}
+
+#[derive(Serialize)]
+struct RequestBody<'l> {
+    title: &'l str,
+    content: &'l str,
 }
 
 impl HassNotifyClient {
@@ -39,10 +45,10 @@ impl HassNotifyClient {
         self.client
             .post(self.url.clone())
             .header("Authorization", self.token.clone())
-            .json(&json!({
-                "title": "PixelWeather",
-                "message": content,
-            }))
+            .json(&RequestBody {
+                title: "PixelWeather",
+                content,
+            })
             .send()
             .await?
             .error_for_status()?;
