@@ -359,7 +359,7 @@ async fn notify_send<S: AsRef<str>>(
 
     // Push notifications come second, after we permanently stored the content in the database.
 
-    // If the client has notifications muted, we won't send them
+    // If the client has notifications muted, we won't send them, just keep it in the database
     if client.notifications_muted() {
         return Ok(());
     }
