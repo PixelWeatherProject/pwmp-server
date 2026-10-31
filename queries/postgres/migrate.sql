@@ -44,6 +44,7 @@ CREATE TABLE settings (
     sleep_time INT2 NOT NULL DEFAULT 60 CHECK (sleep_time > 0),
     sbop BOOLEAN NOT NULL DEFAULT TRUE,
     mute_notifications BOOLEAN NOT NULL DEFAULT FALSE,
+    diagnostics BOOLEAN NOT NULL DEFAULT FALSE,
     device_specific JSON NOT NULL DEFAULT '{}'::json
 );
 

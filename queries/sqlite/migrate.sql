@@ -42,6 +42,7 @@ CREATE TABLE
         sleep_time INTEGER NOT NULL DEFAULT 60 CHECK (sleep_time > 0),
         sbop INTEGER NOT NULL DEFAULT 1,
         mute_notifications INTEGER NOT NULL DEFAULT 0,
+        diagnostics INTEGER NOT NULL DEFAULT 0,
         device_specific TEXT NOT NULL DEFAULT '{}'
     ) STRICT;
 

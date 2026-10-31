@@ -115,6 +115,7 @@ impl super::DatabaseBackend for SqliteClient {
                 sleep_time: row.get::<SleepTime, _>(2).try_into()?,
                 sbop: row.get(3),
                 mute_notifications: row.get(4),
+                diagnostics: row.get(5),
             }),
             None => None,
         };

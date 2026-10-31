@@ -1,6 +1,4 @@
-use super::{
-    EraseOptions, FirmwareBlob, FirmwareEntry, NodeId, SleepTime, UpdateStatId,
-};
+use super::{EraseOptions, FirmwareBlob, FirmwareEntry, NodeId, SleepTime, UpdateStatId};
 use crate::error::Error;
 use pwmp_client::pwmp_msg::{
     aliases::{AirPressure, BatteryVoltage, Humidity, Rssi, Temperature},
@@ -125,6 +123,7 @@ impl super::DatabaseBackend for PostgresClient {
                 sleep_time: row.get::<SleepTime, _>(2).try_into()?,
                 sbop: row.get(3),
                 mute_notifications: row.get(4),
+                diagnostics: row.get(5),
             }),
             None => None,
         };
@@ -157,8 +156,7 @@ impl super::DatabaseBackend for PostgresClient {
             None => None,
         };
         let signed_battery: i16 = battery.try_into()?;
-        let (os_version_major, os_version_middle, os_version_minor) =
-            os_version.to_signed_triple();
+        let (os_version_major, os_version_middle, os_version_minor) = os_version.to_signed_triple();
 
         sqlx::query(include_str!(
             "../../../queries/postgres/post_measurements.sql"

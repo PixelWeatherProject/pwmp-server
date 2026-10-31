@@ -3,7 +3,8 @@ SELECT
     ota,
     sleep_time,
     sbop,
-    mute_notifications
+    mute_notifications,
+    diagnostics
 FROM
     settings
 WHERE
