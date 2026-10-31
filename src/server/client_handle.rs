@@ -10,6 +10,7 @@ use crate::{
     server::{config::NotificationEventsConfig, db::DatabaseBackend},
 };
 use pwmp_client::pwmp_msg::{
+    artifact::Artifact,
     request::Request::{self},
     response::Response,
 };
@@ -210,15 +211,22 @@ async fn handle_request(
             // for now we'll only support UTF-8 encoded strings
             // but we'll expand support to raw blobs
 
-            let Ok(content_str) = std::str::from_utf8(&content) else {
-                error!(
-                    "{}: Diagnostic artifact was not an UTF-8 string",
-                    client.id()
-                );
-                return Ok(Response::InvalidRequest);
+            let content_str = match content {
+                Artifact::String(s) => s,
+                Artifact::Blob(b) => match std::str::from_utf8(&b) {
+                    Ok(s) => s.into(),
+                    Err(_) => {
+                        rror!(
+                            "{}: Diagnostic artifact was not an UTF-8 string",
+                            client.id()
+                        );
+
+                        return Ok(Response::InvalidRequest);
+                    }
+                },
             };
 
-            db.store_diagnostic_artifact(client.id(), &kind, content_str)
+            db.store_diagnostic_artifact(client.id(), &kind, &content_str)
                 .await?;
             Ok(Response::Ok)
         }
