@@ -17,7 +17,7 @@ type MsgLength = u32;
 
 pub struct Client<S> {
     stream: TcpStream,
-    buf: [u8; RCV_BUFFER_SIZE],
+    buf: Box<[u8]>,
     id: MsgId,
     last_id: Option<MsgId>,
     state: S,
@@ -162,7 +162,7 @@ impl Client<Unathenticated> {
     pub fn new(socket: TcpStream, peer_addr: SocketAddr) -> Self {
         Self {
             stream: socket,
-            buf: [0; RCV_BUFFER_SIZE],
+            buf: vec![0; RCV_BUFFER_SIZE].into_boxed_slice(),
             id: 0,
             last_id: None,
             state: Unathenticated,
