@@ -213,17 +213,18 @@ async fn handle_request(
 
             let content_str = match content {
                 Artifact::String(s) => s,
-                Artifact::Blob(b) => match std::str::from_utf8(&b) {
-                    Ok(s) => s.into(),
-                    Err(_) => {
-                        rror!(
+                Artifact::Blob(b) => {
+                    if let Ok(s) = std::str::from_utf8(&b) {
+                        s.into()
+                    } else {
+                        error!(
                             "{}: Diagnostic artifact was not an UTF-8 string",
                             client.id()
                         );
 
                         return Ok(Response::InvalidRequest);
                     }
-                },
+                }
             };
 
             db.store_diagnostic_artifact(client.id(), &kind, &content_str)

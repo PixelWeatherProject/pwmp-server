@@ -1,7 +1,7 @@
 use pwmp_client::{
     PwmpClient,
     ota::UpdateStatus,
-    pwmp_msg::{MsgId, mac::Mac, version::Version},
+    pwmp_msg::{MsgId, artifact::Artifact, mac::Mac, version::Version},
 };
 use std::{
     process::exit,
@@ -79,6 +79,16 @@ pub fn test(host: String, port: Option<u16>, raw_mac: String) {
     if let Err(why) = qbench(
         "post 1",
         || client.post_measurements(0, 0, Some(0), 4200, 100, "<PWMP Test>", -50),
+        &mut response_times,
+    ) {
+        error!("Failed: {why}");
+        exit(1);
+    }
+
+    debug!("Testing diagnostic artifact posting");
+    if let Err(why) = qbench(
+        "diag art",
+        || client.send_diagnostic_data("logs", Artifact::String("Hello, World!".into())),
         &mut response_times,
     ) {
         error!("Failed: {why}");
