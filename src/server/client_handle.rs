@@ -139,15 +139,7 @@ async fn handle_request(
             error!("Received another handshake message");
             Ok(Response::InvalidRequest)
         }
-        Request::PostMeasurements {
-            temperature,
-            humidity,
-            air_pressure,
-            battery,
-            cpu_temp,
-            wifi_ssid,
-            wifi_rssi,
-        } => {
+        Request::PostMeasurements(data) => {
             if client.last_submit().is_some() {
                 error!(
                     "{}: Submitted multiple posts, which is not allowed",
@@ -156,21 +148,21 @@ async fn handle_request(
                 return Ok(Response::InvalidRequest);
             }
 
-            let celsius = decicelsius_to_celsius(temperature);
+            let celsius = decicelsius_to_celsius(data.temperature);
+            // keep a copy of these for the notification message so we
+            // don't have to clone the data
+            let humidity = data.humidity;
+            let air_pressure = data.air_pressure;
 
             debug!(
-                "{}: {celsius:.02}°C, {humidity}%, {air_pressure:?}hPa",
-                client.id()
+                "{}: {celsius:.02}°C, {}%, {:?}hPa",
+                client.id(),
+                data.humidity,
+                data.air_pressure
             );
             db.post_measurements(
                 client.id(),
-                temperature,
-                humidity,
-                air_pressure,
-                cpu_temp,
-                battery,
-                &wifi_ssid,
-                wifi_rssi,
+                data,
                 client.os_version(),
                 client.os_version_ext(),
             )
@@ -182,7 +174,8 @@ async fn handle_request(
                     client,
                     db,
                     format!(
-                        "{celsius:.02}°C, {humidity}%, {}hPa",
+                        "{celsius:.02}°C, {}%, {}hPa",
+                        humidity,
                         air_pressure.map_or_else(|| "-".to_string(), |val| val.to_string())
                     ),
                 )
@@ -190,6 +183,9 @@ async fn handle_request(
             }
 
             Ok(Response::Ok)
+        }
+        Request::PostHistoricMeasurements(_measurements) => {
+            todo!()
         }
         Request::PostDiagnosticsArtifact { kind, content } => {
             if kind.len() > MAX_DIAGART_TAG_SIZE {

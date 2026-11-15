@@ -1,12 +1,7 @@
-use super::{
-    EraseOptions, FirmwareBlob, FirmwareEntry, NodeId, SleepTime, UpdateStatId,
-};
+use super::{EraseOptions, FirmwareBlob, FirmwareEntry, NodeId, SleepTime, UpdateStatId};
 use crate::error::Error;
 use pwmp_client::pwmp_msg::{
-    aliases::{AirPressure, BatteryVoltage, Humidity, Rssi, Temperature},
-    mac::Mac,
-    settings::NodeSettings,
-    version::Version,
+    mac::Mac, measurement::MeasurementCollection, settings::NodeSettings, version::Version,
 };
 use sqlx::{
     Connection, Pool, Row, Sqlite,
@@ -133,30 +128,23 @@ impl super::DatabaseBackend for SqliteClient {
     async fn post_measurements(
         &self,
         node: NodeId,
-        temp: Temperature,
-        hum: Humidity,
-        air_p: Option<AirPressure>,
-        cpu_temp: Temperature,
-        battery: BatteryVoltage,
-        wifi_ssid: &str,
-        wifi_rssi: Rssi,
+        data: MeasurementCollection,
         os_version: Version,
         os_version_ext: Option<&str>,
     ) -> Result<(), Error> {
-        let (os_version_major, os_version_middle, os_version_minor) =
-            os_version.to_signed_triple();
+        let (os_version_major, os_version_middle, os_version_minor) = os_version.to_signed_triple();
 
         sqlx::query(include_str!(
             "../../../queries/sqlite/post_measurements.sql"
         ))
         .bind(node)
-        .bind(temp)
-        .bind(hum)
-        .bind(air_p)
-        .bind(cpu_temp)
-        .bind(battery)
-        .bind(wifi_ssid)
-        .bind(wifi_rssi)
+        .bind(data.temperature)
+        .bind(data.humidity)
+        .bind(data.air_pressure)
+        .bind(data.cpu_temp)
+        .bind(data.battery)
+        .bind(data.wifi_ssid)
+        .bind(data.wifi_rssi)
         .bind(os_version_major)
         .bind(os_version_middle)
         .bind(os_version_minor)

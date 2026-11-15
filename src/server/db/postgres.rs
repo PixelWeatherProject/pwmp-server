@@ -1,10 +1,7 @@
 use super::{EraseOptions, FirmwareBlob, FirmwareEntry, NodeId, SleepTime, UpdateStatId};
 use crate::error::Error;
 use pwmp_client::pwmp_msg::{
-    aliases::{AirPressure, BatteryVoltage, Humidity, Rssi, Temperature},
-    mac::Mac,
-    settings::NodeSettings,
-    version::Version,
+    mac::Mac, measurement::MeasurementCollection, settings::NodeSettings, version::Version,
 };
 use sqlx::{
     Connection, Pool, Postgres, Row,
@@ -141,34 +138,28 @@ impl super::DatabaseBackend for PostgresClient {
     async fn post_measurements(
         &self,
         node: NodeId,
-        temp: Temperature,
-        hum: Humidity,
-        air_p: Option<AirPressure>,
-        cpu_temp: Temperature,
-        battery: BatteryVoltage,
-        wifi_ssid: &str,
-        wifi_rssi: Rssi,
+        data: MeasurementCollection,
         os_version: Version,
         os_version_ext: Option<&str>,
     ) -> Result<(), Error> {
-        let signed_air_p: Option<i16> = match air_p {
+        let signed_air_p: Option<i16> = match data.air_pressure {
             Some(value) => Some(value.try_into()?),
             None => None,
         };
-        let signed_battery: i16 = battery.try_into()?;
+        let signed_battery: i16 = data.battery.try_into()?;
         let (os_version_major, os_version_middle, os_version_minor) = os_version.to_signed_triple();
 
         sqlx::query(include_str!(
             "../../../queries/postgres/post_measurements.sql"
         ))
         .bind(node)
-        .bind(temp)
-        .bind(i16::from(hum))
+        .bind(data.temperature)
+        .bind(i16::from(data.humidity))
         .bind(signed_air_p)
-        .bind(cpu_temp)
+        .bind(data.cpu_temp)
         .bind(signed_battery)
-        .bind(wifi_ssid)
-        .bind(i16::from(wifi_rssi))
+        .bind(data.wifi_ssid)
+        .bind(i16::from(data.wifi_rssi))
         .bind(os_version_major)
         .bind(os_version_middle)
         .bind(os_version_minor)
