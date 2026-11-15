@@ -7,7 +7,10 @@ use crate::{
 };
 use moka::future::Cache;
 use pwmp_client::pwmp_msg::{
-    aliases::Temperature, mac::Mac, measurement::MeasurementCollection, settings::NodeSettings,
+    aliases::Temperature,
+    mac::Mac,
+    measurement::{HistoricMeasurement, MeasurementCollection},
+    settings::NodeSettings,
     version::Version,
 };
 use tracing::debug;
@@ -58,6 +61,14 @@ pub trait DatabaseBackend: Send + Sync {
         &self,
         node: NodeId,
         data: MeasurementCollection,
+        os_version: Version,
+        os_version_ext: Option<&str>,
+    ) -> Result<(), Error>;
+
+    async fn post_historic_measurements(
+        &self,
+        node: NodeId,
+        data: Box<[HistoricMeasurement]>,
         os_version: Version,
         os_version_ext: Option<&str>,
     ) -> Result<(), Error>;
@@ -194,6 +205,18 @@ impl DatabaseBackend for DatabaseClient {
     ) -> Result<(), Error> {
         self.backend
             .post_measurements(node, data, os_version, os_version_ext)
+            .await
+    }
+
+    async fn post_historic_measurements(
+        &self,
+        node: NodeId,
+        data: Box<[HistoricMeasurement]>,
+        os_version: Version,
+        os_version_ext: Option<&str>,
+    ) -> Result<(), Error> {
+        self.backend
+            .post_historic_measurements(node, data, os_version, os_version_ext)
             .await
     }
 

@@ -1,14 +1,17 @@
 use super::{EraseOptions, FirmwareBlob, FirmwareEntry, NodeId, SleepTime, UpdateStatId};
 use crate::error::Error;
 use pwmp_client::pwmp_msg::{
-    mac::Mac, measurement::MeasurementCollection, settings::NodeSettings, version::Version,
+    mac::Mac,
+    measurement::{HistoricMeasurement, MeasurementCollection},
+    settings::NodeSettings,
+    version::Version,
 };
 use sqlx::{
     Connection, Pool, Row, Sqlite,
     sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous},
 };
 use std::{path::PathBuf, time::Duration};
-use tracing::debug;
+use tracing::{debug, warn};
 
 pub struct SqliteClient(Pool<Sqlite>);
 
@@ -119,7 +122,7 @@ impl super::DatabaseBackend for SqliteClient {
     }
 
     #[tracing::instrument(
-        name = "SqliteClient::post_results()",
+        name = "SqliteClient::post_measurements()",
         level = "debug",
         skip(self),
         err,
@@ -152,6 +155,56 @@ impl super::DatabaseBackend for SqliteClient {
         .execute(&self.0)
         .await?;
 
+        Ok(())
+    }
+
+    #[tracing::instrument(
+        name = "SqliteClient::post_historic_measurements()",
+        level = "debug",
+        skip(self),
+        err,
+        ret
+    )]
+    async fn post_historic_measurements(
+        &self,
+        node: NodeId,
+        data: Box<[HistoricMeasurement]>,
+        os_version: Version,
+        os_version_ext: Option<&str>,
+    ) -> Result<(), Error> {
+        if data.is_empty() {
+            warn!("Got empty array of historic measurements");
+            return Ok(());
+        }
+
+        let (os_version_major, os_version_middle, os_version_minor) = os_version.to_signed_triple();
+        let mut tx = self.0.begin().await?;
+
+        for entry in &data {
+            let m = entry.collection();
+            let timestamp: i64 = entry.timestamp().try_into()?;
+
+            sqlx::query(include_str!(
+                "../../../queries/sqlite/post_historic_measurements.sql"
+            ))
+            .bind(node)
+            .bind(m.temperature)
+            .bind(m.humidity)
+            .bind(m.air_pressure)
+            .bind(m.cpu_temp)
+            .bind(m.battery)
+            .bind(&*m.wifi_ssid)
+            .bind(m.wifi_rssi)
+            .bind(os_version_major)
+            .bind(os_version_middle)
+            .bind(os_version_minor)
+            .bind(os_version_ext)
+            .bind(timestamp)
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        tx.commit().await?;
         Ok(())
     }
 

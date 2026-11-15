@@ -31,6 +31,9 @@ const MAX_DIAGART_TAG_SIZE: usize = 32;
 /// Maximum allowed size of a diagnostic artifact's content
 const MAX_DIAGART_CONTENT_SIZE: usize = 4 * 1024 * 1024; // 4 MiB
 
+/// Maximum allowed amount of historic measurement data.
+const MAX_ACCEPTED_HISTORIC_MEASUREMENTS: usize = 32;
+
 #[allow(clippy::needless_pass_by_value, clippy::cognitive_complexity)]
 pub async fn handle_client(
     client: TcpStream,
@@ -184,8 +187,29 @@ async fn handle_request(
 
             Ok(Response::Ok)
         }
-        Request::PostHistoricMeasurements(_measurements) => {
-            todo!()
+        Request::PostHistoricMeasurements(measurements) => {
+            if measurements.is_empty() {
+                warn!("{}: Got empty historic measurements array", client.id());
+                return Ok(Response::InvalidRequest);
+            }
+
+            if measurements.len() > MAX_ACCEPTED_HISTORIC_MEASUREMENTS {
+                error!(
+                    "{}: Got {} amount of historic measurement data, but only {MAX_ACCEPTED_HISTORIC_MEASUREMENTS} are allowed",
+                    client.id(),
+                    measurements.len()
+                );
+            }
+
+            db.post_historic_measurements(
+                client.id(),
+                measurements,
+                client.os_version(),
+                client.os_version_ext(),
+            )
+            .await?;
+
+            Ok(Response::Ok)
         }
         Request::PostDiagnosticsArtifact { kind, content } => {
             if kind.len() > MAX_DIAGART_TAG_SIZE {

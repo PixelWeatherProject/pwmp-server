@@ -1,14 +1,17 @@
 use super::{EraseOptions, FirmwareBlob, FirmwareEntry, NodeId, SleepTime, UpdateStatId};
 use crate::error::Error;
 use pwmp_client::pwmp_msg::{
-    mac::Mac, measurement::MeasurementCollection, settings::NodeSettings, version::Version,
+    mac::Mac,
+    measurement::{HistoricMeasurement, MeasurementCollection},
+    settings::NodeSettings,
+    version::Version,
 };
 use sqlx::{
     Connection, Pool, Postgres, Row,
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
 };
 use std::time::Duration;
-use tracing::debug;
+use tracing::{debug, warn};
 
 pub struct PostgresClient(Pool<Postgres>);
 
@@ -129,7 +132,7 @@ impl super::DatabaseBackend for PostgresClient {
     }
 
     #[tracing::instrument(
-        name = "PostgresClient::post_results()",
+        name = "PostgresClient::post_measurements()",
         level = "debug",
         skip(self),
         err,
@@ -167,6 +170,61 @@ impl super::DatabaseBackend for PostgresClient {
         .execute(&self.0)
         .await?;
 
+        Ok(())
+    }
+
+    #[tracing::instrument(
+        name = "PostgresClient::post_historic_measurements()",
+        level = "debug",
+        skip(self),
+        err,
+        ret
+    )]
+    async fn post_historic_measurements(
+        &self,
+        node: NodeId,
+        data: Box<[HistoricMeasurement]>,
+        os_version: Version,
+        os_version_ext: Option<&str>,
+    ) -> Result<(), Error> {
+        if data.is_empty() {
+            warn!("Got empty array of historic measurements");
+            return Ok(());
+        }
+
+        let (os_version_major, os_version_middle, os_version_minor) = os_version.to_signed_triple();
+        let mut tx = self.0.begin().await?;
+
+        for entry in &data {
+            let m = entry.collection();
+            let signed_air_p: Option<i16> = match m.air_pressure {
+                Some(value) => Some(value.try_into()?),
+                None => None,
+            };
+            let signed_battery: i16 = m.battery.try_into()?;
+            let timestamp: i64 = entry.timestamp().try_into()?;
+
+            sqlx::query(include_str!(
+                "../../../queries/postgres/post_historic_measurements.sql"
+            ))
+            .bind(node)
+            .bind(m.temperature)
+            .bind(i16::from(m.humidity))
+            .bind(signed_air_p)
+            .bind(m.cpu_temp)
+            .bind(signed_battery)
+            .bind(&*m.wifi_ssid)
+            .bind(i16::from(m.wifi_rssi))
+            .bind(os_version_major)
+            .bind(os_version_middle)
+            .bind(os_version_minor)
+            .bind(os_version_ext)
+            .bind(timestamp)
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        tx.commit().await?;
         Ok(())
     }
 
