@@ -54,7 +54,6 @@ pub trait DatabaseBackend: Send + Sync {
 
     async fn get_settings(&self, node_id: NodeId) -> Result<Option<NodeSettings>, Error>;
 
-    #[allow(clippy::too_many_arguments)]
     async fn post_measurements(
         &self,
         node: NodeId,
