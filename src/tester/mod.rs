@@ -2,7 +2,11 @@ use pwmp_client::{
     PwmpClient,
     ota::UpdateStatus,
     pwmp_msg::{
-        MsgId, artifact::Artifact, mac::Mac, measurement::MeasurementCollection, version::Version,
+        MsgId,
+        artifact::Artifact,
+        mac::Mac,
+        measurement::{HistoricMeasurement, MeasurementCollection},
+        version::Version,
     },
 };
 use std::{
@@ -10,7 +14,7 @@ use std::{
     str::FromStr,
     sync::atomic::{AtomicU8, Ordering},
     thread::sleep,
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 use tracing::{debug, error, info};
 
@@ -97,6 +101,17 @@ pub fn test(host: String, port: Option<u16>, raw_mac: String) {
         exit(1);
     }
 
+    debug!("Testing historic measurement posting");
+    let historic_data = generate_historic_measurements(32);
+    if let Err(why) = qbench(
+        "post historic",
+        || client.post_historic_measurements(historic_data),
+        &mut response_times,
+    ) {
+        error!("Failed: {why}");
+        exit(1);
+    }
+
     debug!("Testing diagnostic artifact posting");
     if let Err(why) = qbench(
         "diag art",
@@ -168,6 +183,33 @@ pub fn test(host: String, port: Option<u16>, raw_mac: String) {
     info!(
         "Response timing: min={min_response_time:?}, max={max_response_time:?}, avg={avg_response_time:?}"
     );
+}
+
+/// Generates `count` hourly historic measurements, oldest (`count` hours ago)
+/// first and newest (1 hour ago) last.
+fn generate_historic_measurements(count: u64) -> Vec<HistoricMeasurement> {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+
+    (1..=count)
+        .rev()
+        .map(|hours_ago| {
+            HistoricMeasurement::new(
+                MeasurementCollection {
+                    temperature: 0,
+                    humidity: 0,
+                    air_pressure: Some(0),
+                    battery: 4200,
+                    cpu_temp: 100,
+                    wifi_ssid: "<PWMP Test>".into(),
+                    wifi_rssi: -50,
+                },
+                now - hours_ago * 3600,
+            )
+        })
+        .collect()
 }
 
 fn id_generator() -> MsgId {
