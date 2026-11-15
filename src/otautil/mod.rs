@@ -1,10 +1,7 @@
 use crate::{
     cli::OtaCommand,
     error::Error,
-    server::{
-        config::Config,
-        db::{DatabaseBackend, DatabaseClient},
-    },
+    server::{config::Config, db::DatabaseClient},
 };
 use pwmp_client::pwmp_msg::version::Version;
 use std::process::exit;

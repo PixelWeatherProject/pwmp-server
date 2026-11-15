@@ -2,7 +2,7 @@ use crate::{
     cli::DatabaseCommand,
     server::{
         config::Config,
-        db::{DatabaseBackend, DatabaseClient, EraseOptions},
+        db::{DatabaseClient, EraseOptions},
     },
 };
 use std::{

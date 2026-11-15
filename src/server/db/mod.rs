@@ -28,7 +28,7 @@ type NodeIdCache = Cache<Mac, Option<NodeId>>;
 type NodeSettingsCache = Cache<NodeId, Option<NodeSettings>>;
 
 pub struct DatabaseClient {
-    backend: Box<dyn DatabaseBackend>,
+    backend: Box<DynDatabaseBackend<'static>>,
     node_id_cache: NodeIdCache,
     node_settings_cache: NodeSettingsCache,
 }
@@ -49,64 +49,82 @@ pub struct FirmwareEntry {
     pub restrict: Option<Vec<NodeId>>,
 }
 
-#[async_trait::async_trait]
-pub trait DatabaseBackend: Send + Sync {
-    async fn authorize_device(&self, mac: &Mac) -> Result<Option<NodeId>, Error>;
+/// Contract implemented by each concrete database backend.
+///
+/// `dynosaur` generates `DynDatabaseBackend`, a boxed, dyn-compatible wrapper
+/// used by [`DatabaseClient`]. Implementors write plain `async fn`s.
+#[dynosaur::dynosaur(DynDatabaseBackend = dyn(box) DatabaseBackend)]
+trait DatabaseBackend: Send + Sync {
+    fn authorize_device(
+        &self,
+        mac: &Mac,
+    ) -> impl Future<Output = Result<Option<NodeId>, Error>> + Send;
 
-    async fn create_notification(&self, node_id: NodeId, content: &str) -> Result<(), Error>;
+    fn create_notification(
+        &self,
+        node_id: NodeId,
+        content: &str,
+    ) -> impl Future<Output = Result<(), Error>> + Send;
 
-    async fn get_settings(&self, node_id: NodeId) -> Result<Option<NodeSettings>, Error>;
+    fn get_settings(
+        &self,
+        node_id: NodeId,
+    ) -> impl Future<Output = Result<Option<NodeSettings>, Error>> + Send;
 
-    async fn post_measurements(
+    fn post_measurements(
         &self,
         node: NodeId,
         data: MeasurementCollection,
         os_version: Version,
         os_version_ext: Option<&str>,
-    ) -> Result<(), Error>;
+    ) -> impl Future<Output = Result<(), Error>> + Send;
 
-    async fn post_historic_measurements(
+    fn post_historic_measurements(
         &self,
         node: NodeId,
         data: Box<[HistoricMeasurement]>,
         os_version: Version,
         os_version_ext: Option<&str>,
-    ) -> Result<(), Error>;
+    ) -> impl Future<Output = Result<(), Error>> + Send;
 
-    async fn store_diagnostic_artifact(
+    fn store_diagnostic_artifact(
         &self,
         node: NodeId,
         tag: &str,
         content: &str,
-    ) -> Result<(), Error>;
+    ) -> impl Future<Output = Result<(), Error>> + Send;
 
-    async fn run_migrations(&self) -> Result<(), Error>;
+    fn run_migrations(&self) -> impl Future<Output = Result<(), Error>> + Send;
 
-    async fn check_os_update(
+    fn check_os_update(
         &self,
         node: NodeId,
         current_ver: Version,
-    ) -> Result<Option<(Version, FirmwareBlob)>, Error>;
+    ) -> impl Future<Output = Result<Option<(Version, FirmwareBlob)>, Error>> + Send;
 
-    async fn send_os_update_stat(
+    fn send_os_update_stat(
         &self,
         node_id: NodeId,
         old_ver: Version,
         new_ver: Version,
-    ) -> Result<UpdateStatId, Error>;
+    ) -> impl Future<Output = Result<UpdateStatId, Error>> + Send;
 
-    async fn mark_os_update_stat(&self, node_id: NodeId, success: bool) -> Result<(), Error>;
+    fn mark_os_update_stat(
+        &self,
+        node_id: NodeId,
+        success: bool,
+    ) -> impl Future<Output = Result<(), Error>> + Send;
 
-    async fn erase(&self, options: EraseOptions) -> Result<(), Error>;
+    fn erase(&self, options: EraseOptions) -> impl Future<Output = Result<(), Error>> + Send;
 
-    async fn get_firmwares(&self) -> Result<Vec<FirmwareEntry>, Error>;
+    fn get_firmwares(&self) -> impl Future<Output = Result<Vec<FirmwareEntry>, Error>> + Send;
 
-    async fn upload_firmware(
+    fn upload_firmware(
         &self,
         blob: Vec<u8>,
         version: Version,
         restrict_nodes: Option<Vec<NodeId>>,
-    ) -> Result<(), Error>;
+    ) -> impl Future<Output = Result<(), Error>> + Send;
 }
 
 impl DatabaseClient {
@@ -140,7 +158,7 @@ impl DatabaseClient {
                 name,
                 ssl,
             } => Ok(Self {
-                backend: Box::new(
+                backend: DynDatabaseBackend::new_box(
                     PostgresClient::new(
                         host,
                         *port,
@@ -156,17 +174,16 @@ impl DatabaseClient {
                 node_settings_cache,
             }),
             DatabaseConfig::Sqlite { file } => Ok(Self {
-                backend: Box::new(SqliteClient::new(file, config.limits.devices).await?),
+                backend: DynDatabaseBackend::new_box(
+                    SqliteClient::new(file, config.limits.devices).await?,
+                ),
                 node_id_cache,
                 node_settings_cache,
             }),
         }
     }
-}
 
-#[async_trait::async_trait]
-impl DatabaseBackend for DatabaseClient {
-    async fn authorize_device(&self, mac: &Mac) -> Result<Option<NodeId>, Error> {
+    pub async fn authorize_device(&self, mac: &Mac) -> Result<Option<NodeId>, Error> {
         if let Some(maybe_id) = self.node_id_cache.get(mac).await {
             debug!("Auth cache hit for '{mac}' -> '{maybe_id:?}'");
             return Ok(maybe_id);
@@ -179,11 +196,11 @@ impl DatabaseBackend for DatabaseClient {
         Ok(maybe_id)
     }
 
-    async fn create_notification(&self, node_id: NodeId, content: &str) -> Result<(), Error> {
+    pub async fn create_notification(&self, node_id: NodeId, content: &str) -> Result<(), Error> {
         self.backend.create_notification(node_id, content).await
     }
 
-    async fn get_settings(&self, node_id: NodeId) -> Result<Option<NodeSettings>, Error> {
+    pub async fn get_settings(&self, node_id: NodeId) -> Result<Option<NodeSettings>, Error> {
         if let Some(settings) = self.node_settings_cache.get(&node_id).await {
             debug!("Settings cache hit for '{node_id}'");
             return Ok(settings);
@@ -196,7 +213,7 @@ impl DatabaseBackend for DatabaseClient {
         Ok(settings)
     }
 
-    async fn post_measurements(
+    pub async fn post_measurements(
         &self,
         node: NodeId,
         data: MeasurementCollection,
@@ -208,7 +225,7 @@ impl DatabaseBackend for DatabaseClient {
             .await
     }
 
-    async fn post_historic_measurements(
+    pub async fn post_historic_measurements(
         &self,
         node: NodeId,
         data: Box<[HistoricMeasurement]>,
@@ -220,7 +237,7 @@ impl DatabaseBackend for DatabaseClient {
             .await
     }
 
-    async fn store_diagnostic_artifact(
+    pub async fn store_diagnostic_artifact(
         &self,
         node: NodeId,
         tag: &str,
@@ -231,11 +248,11 @@ impl DatabaseBackend for DatabaseClient {
             .await
     }
 
-    async fn run_migrations(&self) -> Result<(), Error> {
+    pub async fn run_migrations(&self) -> Result<(), Error> {
         self.backend.run_migrations().await
     }
 
-    async fn check_os_update(
+    pub async fn check_os_update(
         &self,
         node: NodeId,
         current_ver: Version,
@@ -243,7 +260,7 @@ impl DatabaseBackend for DatabaseClient {
         self.backend.check_os_update(node, current_ver).await
     }
 
-    async fn send_os_update_stat(
+    pub async fn send_os_update_stat(
         &self,
         node_id: NodeId,
         old_ver: Version,
@@ -254,19 +271,19 @@ impl DatabaseBackend for DatabaseClient {
             .await
     }
 
-    async fn mark_os_update_stat(&self, node_id: NodeId, success: bool) -> Result<(), Error> {
+    pub async fn mark_os_update_stat(&self, node_id: NodeId, success: bool) -> Result<(), Error> {
         self.backend.mark_os_update_stat(node_id, success).await
     }
 
-    async fn erase(&self, options: EraseOptions) -> Result<(), Error> {
+    pub async fn erase(&self, options: EraseOptions) -> Result<(), Error> {
         self.backend.erase(options).await
     }
 
-    async fn get_firmwares(&self) -> Result<Vec<FirmwareEntry>, Error> {
+    pub async fn get_firmwares(&self) -> Result<Vec<FirmwareEntry>, Error> {
         self.backend.get_firmwares().await
     }
 
-    async fn upload_firmware(
+    pub async fn upload_firmware(
         &self,
         blob: Vec<u8>,
         version: Version,

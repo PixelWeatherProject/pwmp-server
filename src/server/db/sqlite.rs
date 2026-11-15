@@ -52,7 +52,6 @@ impl SqliteClient {
     }
 }
 
-#[async_trait::async_trait]
 impl super::DatabaseBackend for SqliteClient {
     #[tracing::instrument(
         name = "SqliteClient::authorize_device()",

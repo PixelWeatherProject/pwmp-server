@@ -5,10 +5,7 @@ use super::{
     db::{DatabaseClient, decicelsius_to_celsius},
     rate_limit::RateLimiter,
 };
-use crate::{
-    error::Error,
-    server::{config::NotificationEventsConfig, db::DatabaseBackend},
-};
+use crate::{error::Error, server::config::NotificationEventsConfig};
 use pwmp_client::pwmp_msg::{
     artifact::Artifact,
     request::Request::{self},

@@ -1,5 +1,5 @@
 use super::db::{DatabaseClient, FirmwareBlob, MeasurementId, NodeId};
-use crate::{error::Error, server::db::DatabaseBackend};
+use crate::error::Error;
 use pwmp_client::pwmp_msg::{
     Message, MsgId, mac::Mac, request::Request, response::Response, settings::NodeSettings,
     version::Version,

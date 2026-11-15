@@ -62,7 +62,6 @@ impl PostgresClient {
     }
 }
 
-#[async_trait::async_trait]
 impl super::DatabaseBackend for PostgresClient {
     #[tracing::instrument(
         name = "PostgresClient::authorize_device()",
