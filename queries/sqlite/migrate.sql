@@ -30,7 +30,8 @@ CREATE TABLE
         os_version_major INTEGER NOT NULL CHECK (os_version_major >= 0),
         os_version_middle INTEGER NOT NULL CHECK (os_version_middle >= 0),
         os_version_minor INTEGER NOT NULL CHECK (os_version_minor >= 0),
-        os_version_ext TEXT DEFAULT NULL
+        os_version_ext TEXT DEFAULT NULL,
+        historic INTEGER NOT NULL DEFAULT 0
     ) STRICT;
 
 CREATE TABLE
