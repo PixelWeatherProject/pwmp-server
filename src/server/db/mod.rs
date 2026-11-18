@@ -12,6 +12,7 @@ use pwmp_client::pwmp_msg::{
     measurement::{HistoricMeasurement, MeasurementCollection},
     settings::NodeSettings,
     version::Version,
+    wlan_stats::WiFiStats,
 };
 use tracing::debug;
 
@@ -74,7 +75,8 @@ trait DatabaseBackend: Send + Sync {
     fn post_measurements(
         &self,
         node: NodeId,
-        data: MeasurementCollection,
+        measurements: MeasurementCollection,
+        wifi_stats: WiFiStats,
         os_version: Version,
         os_version_ext: Option<&str>,
     ) -> impl Future<Output = Result<(), Error>> + Send;
@@ -82,7 +84,8 @@ trait DatabaseBackend: Send + Sync {
     fn post_historic_measurements(
         &self,
         node: NodeId,
-        data: Box<[HistoricMeasurement]>,
+        measurements: Box<[HistoricMeasurement]>,
+        wifi_stats: &WiFiStats,
         os_version: Version,
         os_version_ext: Option<&str>,
     ) -> impl Future<Output = Result<(), Error>> + Send;
@@ -216,24 +219,26 @@ impl DatabaseClient {
     pub async fn post_measurements(
         &self,
         node: NodeId,
-        data: MeasurementCollection,
+        measurements: MeasurementCollection,
+        wifi_stats: WiFiStats,
         os_version: Version,
         os_version_ext: Option<&str>,
     ) -> Result<(), Error> {
         self.backend
-            .post_measurements(node, data, os_version, os_version_ext)
+            .post_measurements(node, measurements, wifi_stats, os_version, os_version_ext)
             .await
     }
 
     pub async fn post_historic_measurements(
         &self,
         node: NodeId,
-        data: Box<[HistoricMeasurement]>,
+        measurements: Box<[HistoricMeasurement]>,
+        wifi_stats: &WiFiStats,
         os_version: Version,
         os_version_ext: Option<&str>,
     ) -> Result<(), Error> {
         self.backend
-            .post_historic_measurements(node, data, os_version, os_version_ext)
+            .post_historic_measurements(node, measurements, wifi_stats, os_version, os_version_ext)
             .await
     }
 

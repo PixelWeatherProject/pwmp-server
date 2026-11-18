@@ -5,6 +5,7 @@ use pwmp_client::pwmp_msg::{
     measurement::{HistoricMeasurement, MeasurementCollection},
     settings::NodeSettings,
     version::Version,
+    wlan_stats::WiFiStats,
 };
 use sqlx::{
     Connection, Pool, Postgres, Row,
@@ -140,28 +141,29 @@ impl super::DatabaseBackend for PostgresClient {
     async fn post_measurements(
         &self,
         node: NodeId,
-        data: MeasurementCollection,
+        measurements: MeasurementCollection,
+        wifi_stats: WiFiStats,
         os_version: Version,
         os_version_ext: Option<&str>,
     ) -> Result<(), Error> {
-        let signed_air_p: Option<i16> = match data.air_pressure {
+        let signed_air_p: Option<i16> = match measurements.air_pressure {
             Some(value) => Some(value.try_into()?),
             None => None,
         };
-        let signed_battery: i16 = data.battery.try_into()?;
+        let signed_battery: i16 = measurements.battery.try_into()?;
         let (os_version_major, os_version_middle, os_version_minor) = os_version.to_signed_triple();
 
         sqlx::query(include_str!(
             "../../../queries/postgres/post_measurements.sql"
         ))
         .bind(node)
-        .bind(data.temperature)
-        .bind(i16::from(data.humidity))
+        .bind(measurements.temperature)
+        .bind(i16::from(measurements.humidity))
         .bind(signed_air_p)
-        .bind(data.cpu_temp)
+        .bind(measurements.cpu_temp)
         .bind(signed_battery)
-        .bind(data.wifi_ssid)
-        .bind(i16::from(data.wifi_rssi))
+        .bind(wifi_stats.ssid())
+        .bind(i16::from(wifi_stats.rssi()))
         .bind(os_version_major)
         .bind(os_version_middle)
         .bind(os_version_minor)
@@ -182,11 +184,12 @@ impl super::DatabaseBackend for PostgresClient {
     async fn post_historic_measurements(
         &self,
         node: NodeId,
-        data: Box<[HistoricMeasurement]>,
+        measurements: Box<[HistoricMeasurement]>,
+        wifi_stats: &WiFiStats,
         os_version: Version,
         os_version_ext: Option<&str>,
     ) -> Result<(), Error> {
-        if data.is_empty() {
+        if measurements.is_empty() {
             warn!("Got empty array of historic measurements");
             return Ok(());
         }
@@ -194,7 +197,7 @@ impl super::DatabaseBackend for PostgresClient {
         let (os_version_major, os_version_middle, os_version_minor) = os_version.to_signed_triple();
         let mut tx = self.0.begin().await?;
 
-        for entry in &data {
+        for entry in &measurements {
             let m = entry.collection();
             let signed_air_p: Option<i16> = match m.air_pressure {
                 Some(value) => Some(value.try_into()?),
@@ -212,8 +215,8 @@ impl super::DatabaseBackend for PostgresClient {
             .bind(signed_air_p)
             .bind(m.cpu_temp)
             .bind(signed_battery)
-            .bind(&*m.wifi_ssid)
-            .bind(i16::from(m.wifi_rssi))
+            .bind(wifi_stats.ssid())
+            .bind(i16::from(wifi_stats.rssi()))
             .bind(os_version_major)
             .bind(os_version_middle)
             .bind(os_version_minor)

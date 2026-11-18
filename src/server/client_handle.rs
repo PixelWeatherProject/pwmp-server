@@ -139,7 +139,10 @@ async fn handle_request(
             error!("Received another handshake message");
             Ok(Response::InvalidRequest)
         }
-        Request::PostMeasurements(data) => {
+        Request::PostMeasurements {
+            measurements,
+            wifi_stats,
+        } => {
             if client.last_submit().is_some() {
                 error!(
                     "{}: Submitted multiple posts, which is not allowed",
@@ -148,25 +151,28 @@ async fn handle_request(
                 return Ok(Response::InvalidRequest);
             }
 
-            let celsius = decicelsius_to_celsius(data.temperature);
+            let celsius = decicelsius_to_celsius(measurements.temperature);
             // keep a copy of these for the notification message so we
             // don't have to clone the data
-            let humidity = data.humidity;
-            let air_pressure = data.air_pressure;
+            let humidity = measurements.humidity;
+            let air_pressure = measurements.air_pressure;
 
             debug!(
                 "{}: {celsius:.02}°C, {}%, {:?}hPa",
                 client.id(),
-                data.humidity,
-                data.air_pressure
+                measurements.humidity,
+                measurements.air_pressure
             );
             db.post_measurements(
                 client.id(),
-                data,
+                measurements,
+                wifi_stats,
                 client.os_version(),
                 client.os_version_ext(),
             )
             .await?;
+
+            client.store_wifi_stats(wifi_stats);
 
             if notifs_cfg.on_measurements_posted {
                 notify_send(
@@ -198,9 +204,18 @@ async fn handle_request(
                 );
             }
 
+            let Some(wifi_stats) = client.get_wifi_stats() else {
+                error!(
+                    "{}: Attempted to post historic measurements without known WiFi stats",
+                    client.id()
+                );
+                return Ok(Response::InvalidRequest);
+            };
+
             db.post_historic_measurements(
                 client.id(),
                 measurements,
+                wifi_stats,
                 client.os_version(),
                 client.os_version_ext(),
             )

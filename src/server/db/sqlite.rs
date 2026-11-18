@@ -5,6 +5,7 @@ use pwmp_client::pwmp_msg::{
     measurement::{HistoricMeasurement, MeasurementCollection},
     settings::NodeSettings,
     version::Version,
+    wlan_stats::WiFiStats,
 };
 use sqlx::{
     Connection, Pool, Row, Sqlite,
@@ -130,7 +131,8 @@ impl super::DatabaseBackend for SqliteClient {
     async fn post_measurements(
         &self,
         node: NodeId,
-        data: MeasurementCollection,
+        measurements: MeasurementCollection,
+        wifi_stats: WiFiStats,
         os_version: Version,
         os_version_ext: Option<&str>,
     ) -> Result<(), Error> {
@@ -140,13 +142,13 @@ impl super::DatabaseBackend for SqliteClient {
             "../../../queries/sqlite/post_measurements.sql"
         ))
         .bind(node)
-        .bind(data.temperature)
-        .bind(data.humidity)
-        .bind(data.air_pressure)
-        .bind(data.cpu_temp)
-        .bind(data.battery)
-        .bind(data.wifi_ssid)
-        .bind(data.wifi_rssi)
+        .bind(measurements.temperature)
+        .bind(measurements.humidity)
+        .bind(measurements.air_pressure)
+        .bind(measurements.cpu_temp)
+        .bind(measurements.battery)
+        .bind(wifi_stats.ssid())
+        .bind(wifi_stats.rssi())
         .bind(os_version_major)
         .bind(os_version_middle)
         .bind(os_version_minor)
@@ -167,11 +169,12 @@ impl super::DatabaseBackend for SqliteClient {
     async fn post_historic_measurements(
         &self,
         node: NodeId,
-        data: Box<[HistoricMeasurement]>,
+        measurements: Box<[HistoricMeasurement]>,
+        wifi_stats: &WiFiStats,
         os_version: Version,
         os_version_ext: Option<&str>,
     ) -> Result<(), Error> {
-        if data.is_empty() {
+        if measurements.is_empty() {
             warn!("Got empty array of historic measurements");
             return Ok(());
         }
@@ -179,7 +182,7 @@ impl super::DatabaseBackend for SqliteClient {
         let (os_version_major, os_version_middle, os_version_minor) = os_version.to_signed_triple();
         let mut tx = self.0.begin().await?;
 
-        for entry in &data {
+        for entry in &measurements {
             let m = entry.collection();
             let timestamp: i64 = entry.timestamp().try_into()?;
 
@@ -192,8 +195,8 @@ impl super::DatabaseBackend for SqliteClient {
             .bind(m.air_pressure)
             .bind(m.cpu_temp)
             .bind(m.battery)
-            .bind(&*m.wifi_ssid)
-            .bind(m.wifi_rssi)
+            .bind(wifi_stats.ssid())
+            .bind(wifi_stats.rssi())
             .bind(os_version_major)
             .bind(os_version_middle)
             .bind(os_version_minor)

@@ -7,6 +7,7 @@ use pwmp_client::{
         mac::Mac,
         measurement::{HistoricMeasurement, MeasurementCollection},
         version::Version,
+        wlan_stats::WiFiStats,
     },
 };
 use std::{
@@ -85,15 +86,16 @@ pub fn test(host: String, port: Option<u16>, raw_mac: String) {
     if let Err(why) = qbench(
         "post 1",
         || {
-            client.post_measurements(MeasurementCollection {
-                temperature: 0,
-                humidity: 0,
-                air_pressure: Some(0),
-                battery: 4200,
-                cpu_temp: 100,
-                wifi_ssid: "<PWMP Test>".into(),
-                wifi_rssi: -50,
-            })
+            client.post_measurements(
+                MeasurementCollection {
+                    temperature: 0,
+                    humidity: 0,
+                    air_pressure: Some(0),
+                    battery: 4200,
+                    cpu_temp: 100,
+                },
+                WiFiStats::new("<PWMP-Test>", -50).unwrap(),
+            )
         },
         &mut response_times,
     ) {
@@ -203,8 +205,6 @@ fn generate_historic_measurements(count: u64) -> Vec<HistoricMeasurement> {
                     air_pressure: Some(0),
                     battery: 4200,
                     cpu_temp: 100,
-                    wifi_ssid: "<PWMP Test>".into(),
-                    wifi_rssi: -50,
                 },
                 now - hours_ago * 3600,
             )

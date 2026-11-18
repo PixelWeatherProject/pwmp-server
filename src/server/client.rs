@@ -2,7 +2,7 @@ use super::db::{DatabaseClient, FirmwareBlob, MeasurementId, NodeId};
 use crate::error::Error;
 use pwmp_client::pwmp_msg::{
     Message, MsgId, mac::Mac, request::Request, response::Response, settings::NodeSettings,
-    version::Version,
+    version::Version, wlan_stats::WiFiStats,
 };
 use std::{io::IoSlice, net::SocketAddr, vec::IntoIter};
 use tokio::{
@@ -51,6 +51,7 @@ pub struct Authenticated {
     last_submit: Option<MeasurementId>,
     update_state: UpdateState,
     settings: Option<NodeSettings>,
+    wifi_stats: Option<WiFiStats>,
 }
 
 impl<S> Client<S> {
@@ -251,6 +252,7 @@ impl Client<Authenticated> {
                 last_submit: None,
                 update_state: UpdateState::Unchecked,
                 settings: None,
+                wifi_stats: None,
             },
             peer_addr: client.peer_addr,
         }
@@ -296,6 +298,14 @@ impl Client<Authenticated> {
             || NodeSettings::default().mute_notifications,
             |s| s.mute_notifications,
         )
+    }
+
+    pub const fn store_wifi_stats(&mut self, stats: WiFiStats) {
+        self.state.wifi_stats = Some(stats);
+    }
+
+    pub const fn get_wifi_stats(&self) -> Option<&WiFiStats> {
+        self.state.wifi_stats.as_ref()
     }
 
     #[tracing::instrument(
